@@ -1,6 +1,7 @@
 {-# Language BangPatterns #-}
 {-# Language FunctionalDependencies #-}
 {-# Language GeneralizedNewtypeDeriving #-}
+{-# Language ScopedTypeVariables #-}
 
 module EasyTest where
 
@@ -165,12 +166,12 @@ note' :: Show s => s -> Test ()
 note' = note . show
 
 -- | Generate a random value
-random :: Random a => Test a
+random :: forall a. Random a => Test a
 random = do
   rng <- asks rng
   liftIO . atomically $ do
     rng0 <- readTVar rng
-    let (a, rng1) = Random.random rng0
+    let (a :: a, rng1) = Random.random rng0
     writeTVar rng rng1
     pure a
 
