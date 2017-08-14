@@ -1,5 +1,5 @@
 {-# Language BangPatterns #-}
-{-# Language FunctionalDependencies #-}
+{-# Language MultiParamTypeClasses #-}
 {-# Language OverloadedStrings #-}
 {-# Language ScopedTypeVariables #-}
 
