@@ -1,5 +1,6 @@
 {-# Language BangPatterns #-}
 {-# Language MultiParamTypeClasses #-}
+{-# Language NamedFieldPuns #-}
 {-# Language OverloadedStrings #-}
 {-# Language ScopedTypeVariables #-}
 
@@ -12,6 +13,7 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
+import Data.List (isPrefixOf)
 import Data.Map (Map)
 import Data.Semigroup ((<>))
 import Data.Text (Text)
@@ -36,10 +38,10 @@ combineStatus (Passed n) (Passed m) = Passed (n + m)
 
 data Env =
   Env { rng :: TVar Random.StdGen
-      , messages :: Text
-      , results :: TBQueue (Maybe (TMVar (Text, Status)))
+      , messages :: [Text]
+      , results :: TBQueue (Maybe (TMVar ([Text], Status)))
       , note_ :: Text -> IO ()
-      , allow :: Text }
+      , allow :: [Text] }
 
 newtype Test a = Test (ReaderT Env IO (Maybe a))
 
@@ -74,13 +76,15 @@ runOnly :: Text -> Test a -> IO ()
 runOnly prefix t = do
   logger <- atomicLogger
   seed <- abs <$> Random.randomIO :: IO Int
-  run' seed logger prefix t
+  let allow = filter (not . T.null) $ T.splitOn "." prefix
+  run' seed logger allow t
 
 -- | Run all tests with the given seed and whose scope starts with the given prefix
 rerunOnly :: Int -> Text -> Test a -> IO ()
 rerunOnly seed prefix t = do
   logger <- atomicLogger
-  run' seed logger prefix t
+  let allow = filter (not . T.null) $ T.splitOn "." prefix
+  run' seed logger allow t
 
 run :: Test a -> IO ()
 run = runOnly ""
@@ -91,7 +95,7 @@ rerun seed = rerunOnly seed ""
 show' :: Show a => a -> Text
 show' = T.pack . show
 
-run' :: Int -> (Text -> IO ()) -> Text -> Test a -> IO ()
+run' :: Int -> (Text -> IO ()) -> [Text] -> Test a -> IO ()
 run' seed note allow (Test t) = do
   let !rng = Random.mkStdGen seed
   resultsQ <- atomically (newTBQueue 50)
@@ -102,16 +106,17 @@ run' seed note allow (Test t) = do
     -- note, totally fine if this bombs once queue is empty
     Just result <- atomically $ readTBQueue resultsQ
     (msgs, passed) <- atomically $ takeTMVar result
-    atomically $ modifyTVar results (Map.insertWith combineStatus msgs passed)
+    let msgs' = T.intercalate "." msgs
+    atomically $ modifyTVar results (Map.insertWith combineStatus msgs' passed)
     resultsMap <- readTVarIO results
-    case Map.findWithDefault Skipped msgs resultsMap of
+    case Map.findWithDefault Skipped msgs' resultsMap of
       Skipped -> pure ()
-      Passed n -> note $ "OK " <> (if n <= 1 then msgs else "(" <> show' n <> ") " <> msgs)
-      Failed -> note $ "FAILED " <> msgs
+      Passed n -> note $ "OK " <> (if n <= 1 then msgs' else "(" <> show' n <> ") " <> msgs')
+      Failed -> note $ "FAILED " <> msgs'
   let line = "------------------------------------------------------------"
   note "Raw test output to follow ... "
   note line
-  e <- try (runReaderT (void t) (Env rngVar "" resultsQ note allow)) :: IO (Either SomeException ())
+  e <- try (runReaderT (void t) (Env rngVar [] resultsQ note allow)) :: IO (Either SomeException ())
   case e of
     Left e -> note $ "Exception while running tests: " <> show' e
     Right () -> pure ()
@@ -133,7 +138,7 @@ run' seed note allow (Test t) = do
           note "😶  hmm ... no test results recorded"
           note "Tip: use `ok`, `expect`, or `crash` to record results"
           note "Tip: if running via `runOnly` or `rerunOnly`, check for typos"
-        1 -> note $ "✅  1 test passed, no failures! 👍 🎉"
+        1 -> note   "✅  1 test passed, no failures! 👍 🎉"
         _ -> note $ "✅  " <> show' succeeded <> " tests passed, no failures! 👍 🎉"
     (hd:_) -> do
       note line
@@ -142,7 +147,7 @@ run' seed note allow (Test t) = do
       note $ "  " <> show' (length failures) <> (if failed == 0 then " failed" else " FAILED (failed scopes below)")
       note $ "    " <> T.intercalate "\n    " (map show' failures)
       note ""
-      note $ "  To rerun with same random seed:\n"
+      note   "  To rerun with same random seed:\n"
       note $ "    EasyTest.rerun " <> show' seed
       note $ "    EasyTest.rerunOnly " <> show' seed <> " " <> "\"" <> hd <> "\""
       note "\n"
@@ -155,10 +160,14 @@ run' seed note allow (Test t) = do
 scope :: Text -> Test a -> Test a
 scope msg (Test t) = Test $ do
   env <- ask
-  let messages' = case messages env of "" -> msg; ms -> ms <> (T.cons '.' msg)
-  case (T.null (allow env) || T.take (T.length (allow env)) msg `T.isPrefixOf` allow env) of
-    False -> putResult Skipped >> pure Nothing
-    True -> liftIO $ runReaderT t (env { messages = messages', allow = T.drop (T.length msg + 1) (allow env) })
+  let msg' = T.splitOn "." msg
+      messages' = messages env <> msg'
+      env' = env { messages = messages' }
+      passes = actionAllowed env'
+
+  if passes
+    then liftIO $ runReaderT t env'
+    else putResult Skipped >> pure Nothing
 
 -- | Log a message
 note :: Text -> Test ()
@@ -288,7 +297,7 @@ runWrap env t = do
   e <- try $ runReaderT t env
   case e of
     Left e -> do
-      note_ env (messages env <> " EXCEPTION: " <> show' (e :: SomeException))
+      note_ env (T.intercalate "." (messages env) <> " EXCEPTION: " <> show' (e :: SomeException))
       runReaderT (putResult Failed) env
       pure Nothing
     Right a -> pure a
@@ -304,14 +313,14 @@ using r cleanup use = Test $ do
   pure a
 
 -- | The current scope
-currentScope :: Test Text
+currentScope :: Test [Text]
 currentScope = asks messages
 
 -- | Prepend the current scope to a logging message
 noteScoped :: Text -> Test ()
 noteScoped msg = do
   s <- currentScope
-  note (s <> (if T.null s then "" else " ") <> msg)
+  note (T.intercalate "." s <> (if null s then "" else " ") <> msg)
 
 -- | Record a successful test at the current scope
 ok :: Test ()
@@ -331,15 +340,23 @@ crash msg = do
 putResult :: Status -> ReaderT Env IO ()
 putResult passed = do
   msgs <- asks messages
-  allow <- asks (T.null . allow)
-  r <- liftIO . atomically $ newTMVar (msgs, if allow then passed else Skipped)
+  allow' <- asks allow
+  r <- liftIO . atomically $ newTMVar
+    (msgs, if allow' `isPrefixOf` msgs then passed else Skipped)
   q <- asks results
   lift . atomically $ writeTBQueue q (Just r)
 
+-- * allow' `isPrefixOf` messages': we're messaging within the allowed range
+-- * messages' `isPrefixOf` allow': we're still building a prefix of the
+--   allowed range but could go deeper
+actionAllowed :: Env -> Bool
+actionAllowed Env{messages, allow}
+  = allow `isPrefixOf` messages || messages `isPrefixOf` allow
+
 instance MonadReader Env Test where
   ask = Test $ do
-    allow <- asks (T.null . allow)
-    case allow of
+    allowed <- asks actionAllowed
+    case allowed of
       True -> Just <$> ask
       False -> pure Nothing
   local f (Test t) = Test (local f t)
@@ -348,8 +365,8 @@ instance MonadReader Env Test where
 instance Monad Test where
   fail = crash . T.pack
   return a = Test $ do
-    allow <- asks (T.null . allow)
-    pure $ case allow of
+    allowed <- asks actionAllowed
+    pure $ case allowed of
       True -> Just a
       False -> Nothing
   Test a >>= f = Test $ do
@@ -367,8 +384,8 @@ instance Applicative Test where
 
 instance MonadIO Test where
   liftIO io = do
-    s <- asks (T.null . allow)
-    case s of
+    allowed <- asks actionAllowed
+    case allowed of
       True -> wrap $ Test (Just <$> liftIO io)
       False -> Test (pure Nothing)
 
