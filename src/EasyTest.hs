@@ -356,9 +356,9 @@ actionAllowed Env{messages, allow}
 instance MonadReader Env Test where
   ask = Test $ do
     allowed <- asks actionAllowed
-    case allowed of
-      True -> Just <$> ask
-      False -> pure Nothing
+    if allowed
+      then Just <$> ask
+      else pure Nothing
   local f (Test t) = Test (local f t)
   reader f = Test (Just <$> reader f)
 
@@ -366,9 +366,9 @@ instance Monad Test where
   fail = crash . T.pack
   return a = Test $ do
     allowed <- asks actionAllowed
-    pure $ case allowed of
-      True -> Just a
-      False -> Nothing
+    pure $ if allowed
+      then Just a
+      else Nothing
   Test a >>= f = Test $ do
     a <- a
     case a of
@@ -385,9 +385,9 @@ instance Applicative Test where
 instance MonadIO Test where
   liftIO io = do
     allowed <- asks actionAllowed
-    case allowed of
-      True -> wrap $ Test (Just <$> liftIO io)
-      False -> Test (pure Nothing)
+    if allowed
+      then wrap $ Test (Just <$> liftIO io)
+      else Test (pure Nothing)
 
 instance Alternative Test where
   empty = Test (pure Nothing)
