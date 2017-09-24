@@ -68,6 +68,10 @@ expectRight :: HasCallStack => Either e a -> Test a
 expectRight (Left _) = crash "expected Right, got Left"
 expectRight (Right a) = ok >> pure a
 
+expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Test ()
+expectEq x y = if x == y then ok else crash $
+  "expected to be equal: (" <> show' x <> "), (" <> show' y <> ")"
+
 tests :: [Test ()] -> Test ()
 tests = msum
 
