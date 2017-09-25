@@ -120,8 +120,9 @@ run' seed note allow (Test t) = do
   let line = "------------------------------------------------------------"
   note "Raw test output to follow ... "
   note line
-  e <- try (runReaderT (void t) (Env rngVar [] resultsQ note allow)) :: IO (Either SomeException ())
-  case e of
+  result <- try (runReaderT (void t) (Env rngVar [] resultsQ note allow))
+    :: IO (Either SomeException ())
+  case result of
     Left e -> note $ "Exception while running tests: " <> show' e
     Right () -> pure ()
   atomically $ writeTBQueue resultsQ Nothing
@@ -298,8 +299,8 @@ wrap (Test t) = Test $ do
 
 runWrap :: Env -> ReaderT Env IO (Maybe a) -> IO (Maybe a)
 runWrap env t = do
-  e <- try $ runReaderT t env
-  case e of
+  result <- try $ runReaderT t env
+  case result of
     Left e -> do
       note_ env (T.intercalate "." (messages env) <> " EXCEPTION: " <> show' (e :: SomeException))
       runReaderT (putResult Failed) env
@@ -309,11 +310,11 @@ runWrap env t = do
 -- | A test with a setup and teardown
 using :: IO r -> (r -> IO ()) -> (r -> Test a) -> Test a
 using r cleanup use = Test $ do
-  r <- liftIO r
+  r' <- liftIO r
   env <- ask
-  let Test t = use r
+  let Test t = use r'
   a <- liftIO (runWrap env t)
-  liftIO (cleanup r)
+  liftIO (cleanup r')
   pure a
 
 -- | The current scope
@@ -374,10 +375,10 @@ instance Monad Test where
       then Just a
       else Nothing
   Test a >>= f = Test $ do
-    a <- a
-    case a of
+    a' <- a
+    case a' of
       Nothing -> pure Nothing
-      Just a -> let Test t = f a in t
+      Just a'' -> let Test t = f a'' in t
 
 instance Functor Test where
   fmap = liftM
@@ -387,10 +388,10 @@ instance Applicative Test where
   (<*>) = ap
 
 instance MonadIO Test where
-  liftIO io = do
+  liftIO action = do
     allowed <- asks actionAllowed
     if allowed
-      then wrap $ Test (Just <$> liftIO io)
+      then wrap $ Test (Just <$> liftIO action)
       else Test (pure Nothing)
 
 instance Alternative Test where
@@ -430,4 +431,4 @@ fork' (Test t) = do
   pure $ do
     a <- liftIO (A.wait waiter)
     case a of Nothing -> empty
-              Just a -> pure a
+              Just a' -> pure a'

@@ -2,7 +2,6 @@
 module Main where
 
 import EasyTest
-import Control.Applicative
 import Control.Monad
 
 suite1 :: Test ()
@@ -16,8 +15,8 @@ suite1 = tests
 
 reverseTest :: Test ()
 reverseTest = scope "list reversal" $ do
-  nums <- listsOf [0..100] (int' 0 99)
-  nums `forM_` \nums -> expect (reverse (reverse nums) == nums)
+  lists <- listsOf [0..100] (int' 0 99)
+  forM_ lists $ \nums -> expect (reverse (reverse nums) == nums)
 
 main :: IO ()
 main = do
