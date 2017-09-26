@@ -15,6 +15,7 @@ synopsis:      Simple, expressive testing library
 build-type:    Simple
 extra-source-files:
 data-files:
+tested-with: GHC == 8.0.2, GHC == 8.2.1
 
 source-repository head
   type: git

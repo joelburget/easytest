@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/joelburget/easytest.svg?branch=master)](https://travis-ci.org/joelburget/easytest)
+
 EasyTest is a simple testing toolkit, meant to replace most uses of QuickCheck, SmallCheck, HUnit, and frameworks like Tasty, etc. Here's an example usage:
 
 ```Haskell
