@@ -36,6 +36,11 @@ library
   exposed-modules:
     EasyTest
 
+  other-modules:
+    EasyTest.Core
+    EasyTest.Generators
+    EasyTest.Porcelain
+
   -- these bounds could probably be made looser
   build-depends:
     async                     >= 2.1      && <= 2.2,
