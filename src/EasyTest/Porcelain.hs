@@ -76,9 +76,9 @@ run' seed note allow (Test t) = do
     atomically $ modifyTVar results (Map.insertWith combineStatus msgs' passed)
     resultsMap <- readTVarIO results
     case Map.findWithDefault Skipped msgs' resultsMap of
-      Skipped -> pure ()
+      Skipped  -> pure ()
       Passed n -> note $ "OK " <> (if n <= 1 then msgs' else "(" <> show' n <> ") " <> msgs')
-      Failed -> note $ "FAILED " <> msgs'
+      Failed   -> note $ "FAILED " <> msgs'
   let line = "------------------------------------------------------------"
   note "Raw test output to follow ... "
   note line
@@ -102,24 +102,28 @@ run' seed note allow (Test t) = do
       note line
       case succeeded of
         0 -> do
-          note "😶  hmm ... no test results recorded"
-          note "Tip: use `ok`, `expect`, or `crash` to record results"
-          note "Tip: if running via `runOnly` or `rerunOnly`, check for typos"
+          note $ T.unlines
+            [ "😶  hmm ... no test results recorded"
+            , "Tip: use `ok`, `expect`, or `crash` to record results"
+            , "Tip: if running via `runOnly` or `rerunOnly`, check for typos"
+            ]
         1 -> note   "✅  1 test passed, no failures! 👍 🎉"
         _ -> note $ "✅  " <> show' succeeded <> " tests passed, no failures! 👍 🎉"
-    (hd:_) -> do
-      note line
-      note "\n"
-      note $ "  " <> show' succeeded <> (if failed == 0 then " PASSED" else " passed")
-      note $ "  " <> show' (length failures) <> (if failed == 0 then " failed" else " FAILED (failed scopes below)")
-      note $ "    " <> T.intercalate "\n    " (map show' failures)
-      note ""
-      note   "  To rerun with same random seed:\n"
-      note $ "    EasyTest.rerun " <> show' seed
-      note $ "    EasyTest.rerunOnly " <> show' seed <> " " <> "\"" <> hd <> "\""
-      note "\n"
-      note line
-      note "❌"
+    hd:_ -> do
+      note $ T.unlines
+        [ line
+        , "\n"
+        , "  " <> show' succeeded <> (if failed == 0 then " PASSED" else " passed")
+        , "  " <> show' (length failures) <> (if failed == 0 then " failed" else " FAILED (failed scopes below)")
+        , "    " <> T.intercalate "\n    " (map show' failures)
+        , ""
+        , "  To rerun with same random seed:\n"
+        , "    EasyTest.rerun " <> show' seed
+        , "    EasyTest.rerunOnly " <> show' seed <> " " <> "\"" <> hd <> "\""
+        , "\n"
+        , line
+        , "❌"
+        ]
       exitWith (ExitFailure 1)
 
 -- | Label a test. Can be nested. A `'.'` is placed between nested
