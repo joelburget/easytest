@@ -15,7 +15,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.List (isPrefixOf)
 import Data.Map (Map)
-import Data.Semigroup ((<>))
+import Data.Semigroup
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -35,6 +35,13 @@ combineStatus s Skipped = s
 combineStatus Failed _ = Failed
 combineStatus _ Failed = Failed
 combineStatus (Passed n) (Passed m) = Passed (n + m)
+
+instance Semigroup Status where
+  (<>) = combineStatus
+
+instance Monoid Status where
+  mempty  = Passed 0
+  mappend = combineStatus
 
 data Env =
   Env { rng :: TVar Random.StdGen
