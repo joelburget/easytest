@@ -2,6 +2,7 @@
 module EasyTest.Porcelain where
 
 import Control.Applicative
+import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
@@ -10,6 +11,7 @@ import Control.Monad.Reader
 import Data.Semigroup
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import GHC.Stack
 import System.Exit
 import qualified Control.Concurrent.Async as A
@@ -40,20 +42,38 @@ expectEq x y = if x == y then ok else crash $
 tests :: [Test ()] -> Test ()
 tests = msum
 
+atomicLogger :: IO (Text -> IO ())
+atomicLogger = do
+  lock <- newMVar ()
+  pure $ \msg ->
+    -- force msg before acquiring lock
+    let dummy = T.foldl' (\_ ch -> ch == 'a') True msg
+    in dummy `seq` bracket (takeMVar lock) (\_ -> putMVar lock ()) (\_ -> T.putStrLn msg)
+
+-- | A test with a setup and teardown
+using :: IO r -> (r -> IO ()) -> (r -> Test a) -> Test a
+using r cleanup use = Test $ do
+  r' <- liftIO r
+  env <- ask
+  let Test t = use r'
+  a <- liftIO (runWrap env t)
+  liftIO (cleanup r')
+  pure a
+
 -- | Run all tests whose scope starts with the given prefix
 runOnly :: Text -> Test a -> IO ()
 runOnly prefix t = do
   logger <- atomicLogger
   seed <- abs <$> Random.randomIO :: IO Int
-  let allow = filter (not . T.null) $ T.splitOn "." prefix
-  run' seed logger allow t
+  let allowed = filter (not . T.null) $ T.splitOn "." prefix
+  run' seed logger allowed t
 
 -- | Run all tests with the given seed and whose scope starts with the given prefix
 rerunOnly :: Int -> Text -> Test a -> IO ()
 rerunOnly seed prefix t = do
   logger <- atomicLogger
-  let allow = filter (not . T.null) $ T.splitOn "." prefix
-  run' seed logger allow t
+  let allowed = filter (not . T.null) $ T.splitOn "." prefix
+  run' seed logger allowed t
 
 run :: Test a -> IO ()
 run = runOnly ""
@@ -62,11 +82,11 @@ rerun :: Int -> Test a -> IO ()
 rerun seed = rerunOnly seed ""
 
 run' :: Int -> (Text -> IO ()) -> [Text] -> Test a -> IO ()
-run' seed note allow (Test t) = do
-  let !rng = Random.mkStdGen seed
+run' seed note_ allowed (Test t) = do
+  let !rng_ = Random.mkStdGen seed
   resultsQ <- atomically (newTBQueue 50)
-  rngVar <- newTVarIO rng
-  note $ "Randomness seed for this run is " <> show' seed <> ""
+  rngVar <- newTVarIO rng_
+  note_ $ "Randomness seed for this run is " <> show' seed <> ""
   results <- atomically $ newTVar Map.empty
   rs <- A.async . forever $ do
     -- note, totally fine if this bombs once queue is empty
@@ -77,15 +97,15 @@ run' seed note allow (Test t) = do
     resultsMap <- readTVarIO results
     case Map.findWithDefault Skipped msgs' resultsMap of
       Skipped  -> pure ()
-      Passed n -> note $ "OK " <> (if n <= 1 then msgs' else "(" <> show' n <> ") " <> msgs')
-      Failed   -> note $ "FAILED " <> msgs'
+      Passed n -> note_ $ "OK " <> (if n <= 1 then msgs' else "(" <> show' n <> ") " <> msgs')
+      Failed   -> note_ $ "FAILED " <> msgs'
   let line = "------------------------------------------------------------"
-  note "Raw test output to follow ... "
-  note line
-  result <- try (runReaderT (void t) (Env rngVar [] resultsQ note allow))
+  note_ "Raw test output to follow ... "
+  note_ line
+  result <- try (runReaderT (void t) (Env rngVar [] resultsQ note_ allowed))
     :: IO (Either SomeException ())
   case result of
-    Left e -> note $ "Exception while running tests: " <> show' e
+    Left e -> note_ $ "Exception while running tests: " <> show' e
     Right () -> pure ()
   atomically $ writeTBQueue resultsQ Nothing
   _ <- A.waitCatch rs
@@ -99,18 +119,18 @@ run' seed note allow (Test t) = do
     failed = length failures
   case failures of
     [] -> do
-      note line
+      note_ line
       case succeeded of
         0 -> do
-          note $ T.unlines
+          note_ $ T.unlines
             [ "😶  hmm ... no test results recorded"
             , "Tip: use `ok`, `expect`, or `crash` to record results"
             , "Tip: if running via `runOnly` or `rerunOnly`, check for typos"
             ]
-        1 -> note   "✅  1 test passed, no failures! 👍 🎉"
-        _ -> note $ "✅  " <> show' succeeded <> " tests passed, no failures! 👍 🎉"
+        1 -> note_   "✅  1 test passed, no failures! 👍 🎉"
+        _ -> note_ $ "✅  " <> show' succeeded <> " tests passed, no failures! 👍 🎉"
     hd:_ -> do
-      note $ T.unlines
+      note_ $ T.unlines
         [ line
         , "\n"
         , "  " <> show' succeeded <> (if failed == 0 then " PASSED" else " passed")
@@ -132,8 +152,8 @@ scope :: Text -> Test a -> Test a
 scope msg (Test t) = Test $ do
   env <- ask
   let msg' = T.splitOn "." msg
-      messages' = messages env <> msg'
-      env' = env { messages = messages' }
+      messages' = envMessages env <> msg'
+      env' = env { envMessages = messages' }
       passes = actionAllowed env'
 
   if passes
@@ -162,11 +182,11 @@ fork' :: Test a -> Test (Test a)
 fork' (Test t) = do
   env <- ask
   tmvar <- liftIO newEmptyTMVarIO
-  liftIO . atomically $ writeTBQueue (results env) (Just tmvar)
+  liftIO . atomically $ writeTBQueue (envResults env) (Just tmvar)
   r <- liftIO . A.async $ runWrap env t
   waiter <- liftIO . A.async $ do
     e <- A.waitCatch r
-    _ <- atomically $ tryPutTMVar tmvar (messages env, Skipped)
+    _ <- atomically $ tryPutTMVar tmvar (envMessages env, Skipped)
     case e of
       Left _ -> pure Nothing
       Right a -> pure a

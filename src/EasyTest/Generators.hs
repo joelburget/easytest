@@ -1,4 +1,5 @@
 {-# language Rank2Types #-}
+{-# language ScopedTypeVariables #-}
 module EasyTest.Generators where
 
 import Control.Applicative
@@ -17,17 +18,17 @@ import EasyTest.Core
 -- | Generate a random value
 random :: forall a. Random a => Test a
 random = do
-  rng <- asks rng
+  rng <- asks envRng
   liftIO . atomically $ do
     rng0 <- readTVar rng
-    let (a, rng1) = Random.random rng0
+    let (a :: a, rng1) = Random.random rng0
     writeTVar rng rng1
     pure a
 
 -- | Generate a bounded random value. Inclusive on both sides.
 random' :: Random a => a -> a -> Test a
 random' lower upper = do
-  rng <- asks rng
+  rng <- asks envRng
   liftIO . atomically $ do
     rng0 <- readTVar rng
     let (a, rng1) = Random.randomR (lower,upper) rng0

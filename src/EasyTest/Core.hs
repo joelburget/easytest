@@ -7,7 +7,6 @@
 module EasyTest.Core where
 
 import Control.Applicative
-import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
@@ -17,7 +16,6 @@ import Data.List (isPrefixOf)
 import Data.Semigroup
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.IO as T
 import GHC.Stack
 import qualified System.Random as Random
 
@@ -41,11 +39,11 @@ instance Monoid Status where
   mappend = combineStatus
 
 data Env =
-  Env { rng :: TVar Random.StdGen
-      , messages :: [Text]
-      , results :: TBQueue (Maybe (TMVar ([Text], Status)))
-      , note_ :: Text -> IO ()
-      , allow :: [Text] }
+  Env { envRng :: TVar Random.StdGen
+      , envMessages :: [Text]
+      , envResults :: TBQueue (Maybe (TMVar ([Text], Status)))
+      , envNote :: Text -> IO ()
+      , envAllow :: [Text] }
 
 newtype Test a = Test (ReaderT Env IO (Maybe a))
 
@@ -60,11 +58,11 @@ crash msg = do
 
 putResult :: Status -> ReaderT Env IO ()
 putResult passed = do
-  msgs <- asks messages
-  allow' <- asks allow
+  msgs <- asks envMessages
+  allow <- asks envAllow
   r <- liftIO . atomically $ newTMVar
-    (msgs, if allow' `isPrefixOf` msgs then passed else Skipped)
-  q <- asks results
+    (msgs, if allow `isPrefixOf` msgs then passed else Skipped)
+  q <- asks envResults
   lift . atomically $ writeTBQueue q (Just r)
 
 -- | Prepend the current scope to a logging message
@@ -76,21 +74,13 @@ noteScoped msg = do
 -- | Log a message
 note :: Text -> Test ()
 note msg = do
-  note_ <- asks note_
+  note_ <- asks envNote
   liftIO $ note_ msg
   pure ()
 
 -- | The current scope
 currentScope :: Test [Text]
-currentScope = asks messages
-
-atomicLogger :: IO (Text -> IO ())
-atomicLogger = do
-  lock <- newMVar ()
-  pure $ \msg ->
-    -- force msg before acquiring lock
-    let dummy = T.foldl' (\_ ch -> ch == 'a') True msg
-    in dummy `seq` bracket (takeMVar lock) (\_ -> putMVar lock ()) (\_ -> T.putStrLn msg)
+currentScope = asks envMessages
 
 -- | Catch all exceptions that could occur in the given `Test`
 wrap :: Test a -> Test a
@@ -103,26 +93,16 @@ runWrap env t = do
   result <- try $ runReaderT t env
   case result of
     Left e -> do
-      note_ env (T.intercalate "." (messages env) <> " EXCEPTION: " <> show' (e :: SomeException))
+      envNote env (T.intercalate "." (envMessages env) <> " EXCEPTION: " <> show' (e :: SomeException))
       runReaderT (putResult Failed) env
       pure Nothing
     Right a -> pure a
-
--- | A test with a setup and teardown
-using :: IO r -> (r -> IO ()) -> (r -> Test a) -> Test a
-using r cleanup use = Test $ do
-  r' <- liftIO r
-  env <- ask
-  let Test t = use r'
-  a <- liftIO (runWrap env t)
-  liftIO (cleanup r')
-  pure a
 
 -- * allow' `isPrefixOf` messages': we're messaging within the allowed range
 -- * messages' `isPrefixOf` allow': we're still building a prefix of the
 --   allowed range but could go deeper
 actionAllowed :: Env -> Bool
-actionAllowed Env{messages, allow}
+actionAllowed Env{envMessages = messages, envAllow = allow}
   = allow `isPrefixOf` messages || messages `isPrefixOf` allow
 
 instance MonadReader Env Test where
@@ -166,12 +146,12 @@ instance Alternative Test where
   Test t1 <|> Test t2 = Test $ do
     env <- ask
     (rng1, rng2) <- liftIO . atomically $ do
-      currentRng <- readTVar (rng env)
+      currentRng <- readTVar (envRng env)
       let (rng1, rng2) = Random.split currentRng
       (,) <$> newTVar rng1 <*> newTVar rng2
     lift $ do
-      _ <- runWrap (env { rng = rng1 }) t1
-      runWrap (env { rng = rng2 }) t2
+      _ <- runWrap (env { envRng = rng1 }) t1
+      runWrap (env { envRng = rng2 }) t2
 
 instance MonadPlus Test where
   mzero = empty
