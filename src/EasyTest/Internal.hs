@@ -1,10 +1,22 @@
-{-# Language BangPatterns #-}
-{-# Language MultiParamTypeClasses #-}
-{-# Language NamedFieldPuns #-}
-{-# Language OverloadedStrings #-}
-{-# Language ScopedTypeVariables #-}
+{-# language BangPatterns #-}
+{-# language MultiParamTypeClasses #-}
+{-# language NamedFieldPuns #-}
+{-# language OverloadedStrings #-}
+{-# language ScopedTypeVariables #-}
 
-module EasyTest.Core where
+module EasyTest.Internal
+  ( -- * Core
+    crash
+  , note
+  , -- * Internal
+    Status(..)
+  , Env(..)
+  , Test(..)
+  , actionAllowed
+  , putResult
+  , runWrap
+  , combineStatus
+  ) where
 
 import Control.Applicative
 import Control.Concurrent.STM
@@ -19,9 +31,7 @@ import qualified Data.Text as T
 import GHC.Stack
 import qualified System.Random as Random
 
-show' :: Show a => a -> Text
-show' = T.pack . show
-
+-- | Status of a test
 data Status = Failed | Passed !Int | Skipped
 
 combineStatus :: Status -> Status -> Status
@@ -45,6 +55,23 @@ data Env =
       , envNote :: Text -> IO ()
       , envAllow :: [Text] }
 
+-- | Tests are values of type @Test a@, and 'Test' forms a monad with access to:
+--
+--     * repeatable randomness (the 'EasyTest.random' and 'EasyTest.random'' functions for random and bounded random values, or handy specialized 'EasyTest.int', 'EasyTest.int'', 'EasyTest.double', 'EasyTest.double'', etc)
+--
+--     * I/O (via 'liftIO' or 'EasyTest.io', which is an alias for 'liftIO')
+--
+--     * failure (via 'crash', which yields a stack trace, or 'fail', which does not)
+--
+--     * logging (via 'EasyTest.note', 'EasyTest.noteScoped', or 'EasyTest.note'')
+--
+--     * hierarchically-named subcomputations (under 'EasyTest.scope') which can be switched on and off via 'EasyTest.runOnly'
+--
+--     * parallelism (via 'EasyTest.fork')
+--
+--     * conjunction of tests via 'MonadPlus' (the '<|>' operation runs both tests, even if the first test fails, and the tests function used above is just 'msum').
+--
+-- Using any or all of these capabilities, you assemble 'Test' values into a "test suite" (just another 'Test' value) using ordinary Haskell code, not framework magic. Notice that to generate a list of random values, we just 'replicateM' and 'forM' as usual.
 newtype Test a = Test (ReaderT Env IO (Maybe a))
 
 -- | Record a failure at the current scope
@@ -93,13 +120,16 @@ runWrap env t = do
   result <- try $ runReaderT t env
   case result of
     Left e -> do
-      envNote env (T.intercalate "." (envMessages env) <> " EXCEPTION: " <> show' (e :: SomeException))
+      envNote env $
+           T.intercalate "." (envMessages env)
+        <> " EXCEPTION: "
+        <> T.pack (show (e :: SomeException))
       runReaderT (putResult Failed) env
       pure Nothing
     Right a -> pure a
 
--- * allow' `isPrefixOf` messages': we're messaging within the allowed range
--- * messages' `isPrefixOf` allow': we're still building a prefix of the
+-- * @allow' `isPrefixOf` messages'@: we're messaging within the allowed range
+-- * @messages' `isPrefixOf` allow'@: we're still building a prefix of the
 --   allowed range but could go deeper
 actionAllowed :: Env -> Bool
 actionAllowed Env{envMessages = messages, envAllow = allow}

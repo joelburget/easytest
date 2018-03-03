@@ -1,5 +1,27 @@
-{-# Language OverloadedStrings #-}
-module EasyTest.Porcelain where
+{-# language OverloadedStrings #-}
+module EasyTest.Porcelain
+  ( -- * Tests
+    Test
+  , expect
+  , expectJust
+  , expectRight
+  , expectEq
+  , tests
+  , using
+  , runOnly
+  , rerunOnly
+  , run
+  , rerun
+  , scope
+  , note'
+  , ok
+  , skip
+  , fork
+  , fork'
+  , crash
+  , note
+  , io
+  ) where
 
 import Control.Applicative
 import Control.Concurrent
@@ -18,8 +40,9 @@ import qualified Control.Concurrent.Async as A
 import qualified Data.Map as Map
 import qualified System.Random as Random
 
-import EasyTest.Core
+import EasyTest.Internal
 
+-- | Convenient alias for 'liftIO'
 io :: IO a -> Test a
 io = liftIO
 
@@ -39,6 +62,9 @@ expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Test ()
 expectEq x y = if x == y then ok else crash $
   "expected to be equal: (" <> show' x <> "), (" <> show' y <> ")"
 
+-- | Run a list of tests
+--
+-- This specializes 'msum', 'Data.Foldable.asum', and 'sequence_'.
 tests :: [Test ()] -> Test ()
 tests = msum
 
@@ -68,16 +94,18 @@ runOnly prefix t = do
   let allowed = filter (not . T.null) $ T.splitOn "." prefix
   run' seed logger allowed t
 
--- | Run all tests with the given seed and whose scope starts with the given prefix
+-- | Rerun all tests with the given seed and whose scope starts with the given prefix
 rerunOnly :: Int -> Text -> Test a -> IO ()
 rerunOnly seed prefix t = do
   logger <- atomicLogger
   let allowed = filter (not . T.null) $ T.splitOn "." prefix
   run' seed logger allowed t
 
+-- | Run all tests
 run :: Test a -> IO ()
 run = runOnly ""
 
+-- | Rerun all tests with the given seed
 rerun :: Int -> Test a -> IO ()
 rerun seed = rerunOnly seed ""
 
@@ -146,8 +174,8 @@ run' seed note_ allowed (Test t) = do
         ]
       exitWith (ExitFailure 1)
 
--- | Label a test. Can be nested. A `'.'` is placed between nested
--- scopes, so `scope "foo" . scope "bar"` is equivalent to `scope "foo.bar"`
+-- | Label a test. Can be nested. A "." is placed between nested
+-- scopes, so @scope "foo" . scope "bar"@ is equivalent to @scope "foo.bar"@
 scope :: Text -> Test a -> Test a
 scope msg (Test t) = Test $ do
   env <- ask
@@ -159,6 +187,10 @@ scope msg (Test t) = Test $ do
   if passes
     then liftIO $ runReaderT t env'
     else putResult Skipped >> pure Nothing
+
+-- TODO: replace with show-text?
+show' :: Show a => a -> Text
+show' = T.pack . show
 
 -- | Log a showable value
 note' :: Show s => s -> Test ()

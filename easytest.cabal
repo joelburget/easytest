@@ -35,9 +35,9 @@ library
 
   exposed-modules:
     EasyTest
+    EasyTest.Internal
 
   other-modules:
-    EasyTest.Core
     EasyTest.Generators
     EasyTest.Porcelain
 

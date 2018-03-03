@@ -1,5 +1,7 @@
-module EasyTest (module Core, module Generators, module Porcelain) where
+module EasyTest (
+  module EasyTest.Porcelain,
+  module EasyTest.Generators
+  ) where
 
-import EasyTest.Core as Core
-import EasyTest.Generators as Generators
-import EasyTest.Porcelain as Porcelain
+import EasyTest.Generators
+import EasyTest.Porcelain
