@@ -1,4 +1,5 @@
 {-# language OverloadedStrings #-}
+{-# language BangPatterns #-}
 module EasyTest.Porcelain
   ( -- * Tests
     Test
