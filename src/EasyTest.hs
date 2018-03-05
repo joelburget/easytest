@@ -21,8 +21,8 @@ suite = tests
   , scope "list.reversal" . fork $ do
       -- generate lists from size 0 to 10, of Ints in (0,43)
       -- shorthand: listsOf [0..10] (int' 0 43)
-      ns <- [0..10] `forM` \n -> replicateM n (int' 0 43)
-      ns `forM_` \ns -> expect (reverse (reverse ns) == ns)
+      ns @<-@ [0..10] @`@forM@`@ \\n -> replicateM n (int' 0 43)
+      ns @`@forM_@`@ \\ns -> expect (reverse (reverse ns) == ns)
   -- equivalent to `scope "addition.ex3"`
   , scope "addition" . scope "ex3" $ expect (3 + 3 == 6)
   , scope "always passes" $ do
@@ -71,12 +71,12 @@ listOf :: Int -> Test a -> Test [a]
 listOf = replicateM
 
 listsOf :: [Int] -> Test a -> Test [[a]]
-listsOf sizes gen = sizes `forM` \n -> listOf n gen
+listsOf sizes gen = sizes @`@forM@`@ \\n -> listOf n gen
 
 ex :: Test ()
 ex = do
   ns <- listsOf [0..100] int
-  ns `forM_` \ns -> expect (reverse (reverse ns) == ns)
+  ns @`@forM_@`@ \\ns -> expect (reverse (reverse ns) == ns)
 This library is opinionated and might not be for everyone. If you're curious about any of the design decisions made, see my rationale for writing it.
 @
 
@@ -91,7 +91,7 @@ ok :: Test ()
 -- Record a failure
 crash :: String -> Test a
 
--- Record a success if `True`, otherwise record a failure
+-- Record a success if True, otherwise record a failure
 expect :: Bool -> Test ()
 @
 
@@ -136,7 +136,7 @@ Randomness seed for this run is 1830293182471192517
 Raw test output to follow ...
 ------------------------------------------------------------
 test-crash FAILURE oh noes! CallStack (from HasCallStack):
-  crash, called at /Users/pchiusano/code/easytest/tests/Suite.hs:10:24 in main:Main
+  crash, called at @/@Users@/@pchiusano@/@code@/@easytest@/@tests@/@Suite.hs:10:24 in main:Main
 OK
 FAILED test-crash
 ------------------------------------------------------------
@@ -164,8 +164,8 @@ If you try running a test suite that has no results recorded (like if you have a
 
 @
 😶  hmm ... no test results recorded
-Tip: use `ok`, `expect`, or `crash` to record results
-Tip: if running via `runOnly` or `rerunOnly`, check for typos
+Tip: use @`@ok@`@, @`@expect@`@, or @`@crash@`@ to record results
+Tip: if running via @`@runOnly@`@ or @`@rerunOnly@`@, check for typos
 @
 
 The various run functions (@run@, @runOnly@, @rerun@, and @rerunOnly@) all exit the process with a nonzero status in the event of a failure, so they can be used for continuous integration or test running tools that key off the process exit code to determine whether the suite succeeded or failed. For instance, here's the relevant portion of a typical cabal file:
@@ -196,7 +196,7 @@ test-suite tests
     easytest
 @
 
-For tests that are logically separate, we usually combine them into a suite using tests (which is just msum), as in:
+For tests that are logically separate, we usually combine them into a suite using @tests@ (which is just @msum@), as in:
 
 @
 suite = tests
@@ -205,7 +205,7 @@ suite = tests
 
 -- equivalently
 suite =
-  (scope "ex1" $ expect (1 + 1 == 2)) <|>
+  (scope "ex1" $ expect (1 + 1 == 2)) '<|>'
   (scope "ex2" $ expect (2 + 2 == 4))
 @
 
@@ -235,7 +235,7 @@ reverseTest = scope "list reversal" $ do
 
 Tip: generate your test cases in order of increasing size. If you get a failure, your test case is closer to "minimal".
 
-The above code generates lists of sizes 0 through 100, consisting of Int values in the range 0 through 99. @int' :: Int -> Int -> Test Int@, and there are analogous functions for @Double@, @Word@, etc. The most general functions are:
+The above code generates lists of sizes 0 through 100, consisting of @Int@ values in the range 0 through 99. @int' :: Int -> Int -> Test Int@, and there are analogous functions for @Double@, @Word@, etc. The most general functions are:
 
 @
 random :: Random a => Test a
@@ -244,7 +244,7 @@ random' :: Random a => a -> a -> Test a
 
 The functions @int@, @char@, @bool@, @double@, etc are just specialized aliases for @random@, and @int'@, @char'@, etc are just aliases for @random'@. The aliases are sometimes useful in situations where use of the generic @random@ or @random'@ would require type annotations.
 
-If our list reversal test failed, we might use @runOnly "list reversal"@ or @rerunOnly <randomseed> "list reversal"@ to rerun just that subtree of the test suite, and we might add some additional diagnostics to see what was going on:
+If our list reversal test failed, we might use @runOnly "list reversal"@ or @rerunOnly \<randomseed\> "list reversal"@ to rerun just that subtree of the test suite, and we might add some additional diagnostics to see what was going on:
 
 @
 reverseTest :: Test ()
