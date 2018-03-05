@@ -1,4 +1,5 @@
 {-# language BangPatterns #-}
+{-# language FlexibleInstances #-}
 {-# language MultiParamTypeClasses #-}
 {-# language NamedFieldPuns #-}
 {-# language OverloadedStrings #-}
@@ -8,6 +9,7 @@ module EasyTest.Internal
   ( -- * Core
     crash
   , note
+  , scope
   , -- * Internal
     Status(..)
   , Env(..)
@@ -26,6 +28,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.List (isPrefixOf)
 import Data.Semigroup
+import Data.String (IsString(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Stack
@@ -91,6 +94,20 @@ putResult passed = do
     (msgs, if allow `isPrefixOf` msgs then passed else Skipped)
   q <- asks envResults
   lift . atomically $ writeTBQueue q (Just r)
+
+-- | Label a test. Can be nested. A "." is placed between nested
+-- scopes, so @scope "foo" . scope "bar"@ is equivalent to @scope "foo.bar"@
+scope :: Text -> Test a -> Test a
+scope msg (Test t) = Test $ do
+  env <- ask
+  let msg' = T.splitOn "." msg
+      messages' = envMessages env <> msg'
+      env' = env { envMessages = messages' }
+      passes = actionAllowed env'
+
+  if passes
+    then liftIO $ runReaderT t env'
+    else putResult Skipped >> pure Nothing
 
 -- | Prepend the current scope to a logging message
 noteScoped :: Text -> Test ()
@@ -186,3 +203,6 @@ instance Alternative Test where
 instance MonadPlus Test where
   mzero = empty
   mplus = (<|>)
+
+instance IsString (Test a -> Test a) where
+  fromString str = scope (T.pack str)

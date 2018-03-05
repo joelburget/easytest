@@ -10,7 +10,9 @@ suite1 = tests
   , scope "b.c" ok
   , scope "b" ok
   , scope "b" . scope "c" . scope "d" $ ok
-  , scope "c" ok
+
+  -- you can also drop the "scope"
+  , "c" ok
   ]
 
 reverseTest :: Test ()

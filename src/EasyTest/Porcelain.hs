@@ -175,20 +175,6 @@ run' seed note_ allowed (Test t) = do
         ]
       exitWith (ExitFailure 1)
 
--- | Label a test. Can be nested. A "." is placed between nested
--- scopes, so @scope "foo" . scope "bar"@ is equivalent to @scope "foo.bar"@
-scope :: Text -> Test a -> Test a
-scope msg (Test t) = Test $ do
-  env <- ask
-  let msg' = T.splitOn "." msg
-      messages' = envMessages env <> msg'
-      env' = env { envMessages = messages' }
-      passes = actionAllowed env'
-
-  if passes
-    then liftIO $ runReaderT t env'
-    else putResult Skipped >> pure Nothing
-
 -- TODO: replace with show-text?
 show' :: Show a => a -> Text
 show' = T.pack . show
