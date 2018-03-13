@@ -1,5 +1,8 @@
-{-# language OverloadedStrings #-}
 {-# language BangPatterns #-}
+{-# language CPP #-}
+{-# language FlexibleContexts #-}
+{-# language OverloadedStrings #-}
+
 module EasyTest.Porcelain
   ( -- * Tests
     Test
@@ -35,7 +38,7 @@ import Data.Semigroup
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import GHC.Stack
+import Data.CallStack
 import System.Exit
 import qualified Control.Concurrent.Async as A
 import qualified Data.Map as Map

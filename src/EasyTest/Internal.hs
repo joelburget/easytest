@@ -1,4 +1,6 @@
 {-# language BangPatterns #-}
+{-# language CPP #-}
+{-# language FlexibleContexts #-}
 {-# language FlexibleInstances #-}
 {-# language MultiParamTypeClasses #-}
 {-# language NamedFieldPuns #-}
@@ -31,7 +33,11 @@ import Data.Semigroup
 import Data.String (IsString(..))
 import Data.Text (Text)
 import qualified Data.Text as T
+#if MIN_VERSION_base(4,9,0)
 import GHC.Stack
+#else
+import Data.CallStack
+#endif
 import qualified System.Random as Random
 
 -- | Status of a test
@@ -49,7 +55,10 @@ instance Semigroup Status where
 
 instance Monoid Status where
   mempty  = Passed 0
+#if !MIN_VERSION_base(4,11,0)
+  -- This is redudant starting with base-4.11 / GHC 8.4.
   mappend = combineStatus
+#endif
 
 data Env =
   Env { envRng :: TVar Random.StdGen
@@ -76,6 +85,11 @@ data Env =
 --
 -- Using any or all of these capabilities, you assemble 'Test' values into a "test suite" (just another 'Test' value) using ordinary Haskell code, not framework magic. Notice that to generate a list of random values, we just 'replicateM' and 'forM' as usual.
 newtype Test a = Test (ReaderT Env IO (Maybe a))
+
+#if !MIN_VERSION_base(4,9,0)
+prettyCallStack :: CallStack -> String
+prettyCallStack = show
+#endif
 
 -- | Record a failure at the current scope
 crash :: HasCallStack => Text -> Test a
