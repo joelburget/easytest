@@ -29,7 +29,9 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.List (isPrefixOf)
+#if !(MIN_VERSION_base(4,11,0))
 import Data.Semigroup
+#endif
 import Data.String (IsString(..))
 import Data.Text (Text)
 import qualified Data.Text as T

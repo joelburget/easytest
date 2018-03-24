@@ -34,7 +34,9 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
+#if !(MIN_VERSION_base(4,11,0))
 import Data.Semigroup
+#endif
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
