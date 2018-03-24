@@ -1,5 +1,5 @@
-resolver: lts-6.27
+resolver: nightly-2018-03-23
 packages:
 - .
-extra-deps:
-- base-feature-macros-0.1.0.1
+# extra-deps:
+# - base-feature-macros-0.1.0.1
