@@ -2,6 +2,7 @@
 
 * [`expectRight` now shows `Left`s. `expectRightNoShow` replicates the old functionality.](https://github.com/joelburget/easytest/commit/c2d5dccc97dcdb925ebc39c36fcde9ff8d894f77)
 * [Call stacks now longer show EasyTest porcelain.](https://github.com/joelburget/easytest/commit/0b7064915a5b9c9de0115ebb6fc2fa49b2c4776e)
+* [`expectJust` and `expectRight` now return unit](https://github.com/joelburget/easytest/commit/ef5d4e9fd03c1008c810ee09a4f4c459d4e26bdb)
 
 ## 0.1.1 (3/25/2018)
 
