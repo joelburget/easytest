@@ -39,7 +39,6 @@ import GHC.Exts (fromList, toList)
 #if MIN_VERSION_base(4,9,0)
 import GHC.Stack
 #else
-import GHC.Stack (SrcLoc(srcLocFile))
 import Data.CallStack
 #endif
 import qualified System.Random as Random
@@ -100,7 +99,7 @@ crash :: HasCallStack => Text -> Test a
 crash msg = do
   let trace = callStack
       trace' = fromList $ filter
-        (\(_msg, SrcLoc {srcLocFile}) -> srcLocFile /= "src/EasyTest/Porcelain.hs")
+        (\(_msg, loc) -> srcLocFile loc /= "src/EasyTest/Porcelain.hs")
         $ toList trace
       msg' = msg <> " " <> T.pack (prettyCallStack trace')
   Test (Just <$> putResult Failed)
