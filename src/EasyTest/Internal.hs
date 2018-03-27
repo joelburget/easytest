@@ -39,6 +39,7 @@ import GHC.Exts (fromList, toList)
 #if MIN_VERSION_base(4,9,0)
 import GHC.Stack
 #else
+import GHC.Stack (SrcLoc(srcLocFile))
 import Data.CallStack
 #endif
 import qualified System.Random as Random
