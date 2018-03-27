@@ -59,17 +59,17 @@ expect :: HasCallStack => Bool -> Test ()
 expect False = crash "unexpected"
 expect True = ok
 
-expectJust :: HasCallStack => Maybe a -> Test a
+expectJust :: HasCallStack => Maybe a -> Test ()
 expectJust Nothing = crash "expected Just, got Nothing"
-expectJust (Just a) = ok >> pure a
+expectJust (Just _) = ok
 
-expectRight :: (Show e, HasCallStack) => Either e a -> Test a
+expectRight :: (Show e, HasCallStack) => Either e a -> Test ()
 expectRight (Left e)  = crash $ "expected Right, got (Left " <> T.pack (show e) <> ")"
-expectRight (Right a) = ok >> pure a
+expectRight (Right _) = ok
 
-expectRightNoShow :: HasCallStack => Either e a -> Test a
+expectRightNoShow :: HasCallStack => Either e a -> Test ()
 expectRightNoShow (Left _)  = crash $ "expected Right, got Left"
-expectRightNoShow (Right a) = ok >> pure a
+expectRightNoShow (Right _) = ok
 
 expectLeft :: (Show a, HasCallStack) => Either e a -> Test ()
 expectLeft (Right a) = crash $ "expected Left, got (Right " <> T.pack (show a) <> ")"
