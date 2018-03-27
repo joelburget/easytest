@@ -10,6 +10,8 @@ module EasyTest.Porcelain
   , expectJust
   , expectRight
   , expectRightNoShow
+  , expectLeft
+  , expectLeftNoShow
   , expectEq
   , tests
   , using
@@ -68,6 +70,14 @@ expectRight (Right a) = ok >> pure a
 expectRightNoShow :: HasCallStack => Either e a -> Test a
 expectRightNoShow (Left _)  = crash $ "expected Right, got Left"
 expectRightNoShow (Right a) = ok >> pure a
+
+expectLeft :: (Show a, HasCallStack) => Either e a -> Test ()
+expectLeft (Right a) = crash $ "expected Left, got (Right " <> T.pack (show a) <> ")"
+expectLeft (Left _)  = ok
+
+expectLeftNoShow :: HasCallStack => Either e a -> Test ()
+expectLeftNoShow (Right _) = crash $ "expected Left, got Right"
+expectLeftNoShow (Left _)  = ok
 
 expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Test ()
 expectEq x y = if x == y then ok else crash $

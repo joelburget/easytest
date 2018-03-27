@@ -36,3 +36,10 @@ main = do
     , scope "x.go" (crash "never run")
     ]
   run reverseTest
+
+  run $ tests
+    [ expectLeft        (Left 1   :: Either Int ())
+    , expectLeftNoShow  (Left 2   :: Either Int ())
+    , expectRight       (Right () :: Either Int ())
+    , expectRightNoShow (Right () :: Either Int ())
+    ]
