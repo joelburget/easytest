@@ -1,3 +1,8 @@
+## 0.2 (3/27/2018)
+
+* [`expectRight` now shows `Left`s. `expectRightNoShow` replicates the old functionality.](https://github.com/joelburget/easytest/commit/c2d5dccc97dcdb925ebc39c36fcde9ff8d894f77)
+* [Call stacks now longer show EasyTest porcelain.](https://github.com/joelburget/easytest/commit/0b7064915a5b9c9de0115ebb6fc2fa49b2c4776e)
+
 ## 0.1.1 (3/25/2018)
 
 * [Add ghc 7.10.3 compatibility.](https://github.com/joelburget/easytest/commit/4acfad507cefc3fb2c0d588f1fbe0e4d583a762d)
