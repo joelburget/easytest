@@ -111,7 +111,7 @@ crash msg = do
   noteScoped ("FAILURE " <> msg')
   Test (pure Nothing)
 
--- | Record a failure at the current scope
+-- | Record a failure with a diff at the current scope
 crashDiff :: HasCallStack => Text -> [Diff String] -> Test a
 crashDiff msg chunks = do
   let trace = callStack
@@ -153,6 +153,7 @@ noteScoped msg = do
   s <- currentScope
   note (T.intercalate "." s <> (if null s then "" else " ") <> msg)
 
+-- | Log a diff
 noteDiff :: [Diff String] -> Test ()
 noteDiff chunks = do
   note_ <- asks envNoteDiff
