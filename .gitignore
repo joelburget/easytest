@@ -1,4 +1,5 @@
 dist
+dist-docs.*
 dist-newstyle
 .ghc.*
 .stack-work
