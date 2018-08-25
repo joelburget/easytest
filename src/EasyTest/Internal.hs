@@ -66,13 +66,14 @@ instance Monoid Status where
   mappend = combineStatus
 #endif
 
-data Env =
-  Env { envRng      :: TVar Random.StdGen
-      , envMessages :: [Text]
-      , envResults  :: TBQueue (Maybe (TMVar ([Text], Status)))
-      , envNote     :: Text -> IO ()
-      , envNoteDiff :: [Diff String] -> IO ()
-      , envAllow    :: [Text] }
+data Env = Env
+  { envRng      :: !(TVar Random.StdGen)
+  , envMessages :: ![Text]
+  , envResults  :: !(TBQueue (Maybe (TMVar ([Text], Status))))
+  , envNote     :: !(Text -> IO ())
+  , envNoteDiff :: !([Diff String] -> IO ())
+  , envAllow    :: ![Text]
+  }
 
 -- | Tests are values of type @Test a@, and 'Test' forms a monad with access to:
 --
