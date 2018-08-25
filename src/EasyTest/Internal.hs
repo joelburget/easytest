@@ -10,7 +10,9 @@
 module EasyTest.Internal
   ( -- * Core
     crash
+  , crashDiff
   , note
+  , noteDiff
   , scope
   , -- * Internal
     Status(..)
@@ -43,6 +45,8 @@ import Data.CallStack
 #endif
 import qualified System.Random as Random
 
+import EasyTest.Diff
+
 -- | Status of a test
 data Status = Failed | Passed !Int | Skipped
 
@@ -68,6 +72,7 @@ data Env =
       , envMessages :: [Text]
       , envResults :: TBQueue (Maybe (TMVar ([Text], Status)))
       , envNote :: Text -> IO ()
+      , envNoteDiff :: [Diff String] -> IO ()
       , envAllow :: [Text] }
 
 -- | Tests are values of type @Test a@, and 'Test' forms a monad with access to:
@@ -106,6 +111,19 @@ crash msg = do
   noteScoped ("FAILURE " <> msg')
   Test (pure Nothing)
 
+-- | Record a failure at the current scope
+crashDiff :: HasCallStack => Text -> [Diff String] -> Test a
+crashDiff msg chunks = do
+  let trace = callStack
+      trace' = fromList $ filter
+        (\(_msg, loc) -> srcLocFile loc /= "src/EasyTest/Porcelain.hs")
+        $ toList trace
+      msg' = msg <> " " <> T.pack (prettyCallStack trace')
+  Test (Just <$> putResult Failed)
+  noteScoped ("FAILURE " <> msg')
+  noteDiff chunks
+  Test (pure Nothing)
+
 putResult :: Status -> ReaderT Env IO ()
 putResult passed = do
   msgs <- asks envMessages
@@ -134,6 +152,12 @@ noteScoped :: Text -> Test ()
 noteScoped msg = do
   s <- currentScope
   note (T.intercalate "." s <> (if null s then "" else " ") <> msg)
+
+noteDiff :: [Diff String] -> Test ()
+noteDiff chunks = do
+  note_ <- asks envNoteDiff
+  liftIO $ note_ chunks
+  pure ()
 
 -- | Log a message
 note :: Text -> Test ()

@@ -42,4 +42,5 @@ main = do
     , expectLeftNoShow  (Left 2   :: Either Int ())
     , expectRight       (Right () :: Either Int ())
     , expectRightNoShow (Right () :: Either Int ())
+    , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
     ]

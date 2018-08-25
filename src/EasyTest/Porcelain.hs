@@ -1,6 +1,7 @@
 {-# language BangPatterns #-}
 {-# language CPP #-}
 {-# language FlexibleContexts #-}
+{-# language LambdaCase #-}
 {-# language OverloadedStrings #-}
 
 module EasyTest.Porcelain
@@ -26,6 +27,7 @@ module EasyTest.Porcelain
   , fork
   , fork'
   , crash
+  , crashDiff
   , note
   , io
   ) where
@@ -48,7 +50,9 @@ import System.Exit
 import qualified Control.Concurrent.Async as A
 import qualified Data.Map as Map
 import qualified System.Random as Random
+import System.Console.ANSI
 
+import EasyTest.Diff
 import EasyTest.Internal
 
 -- | Convenient alias for 'liftIO'
@@ -80,8 +84,9 @@ expectLeftNoShow (Right _) = crash $ "expected Left, got Right"
 expectLeftNoShow (Left _)  = ok
 
 expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Test ()
-expectEq x y = if x == y then ok else crash $
-  "expected to be equal: (" <> show' x <> "), (" <> show' y <> ")"
+expectEq x y = if x == y then ok else
+  let chunks = diff (show x) (show y)
+  in crashDiff "expected to be equal: " chunks
 
 -- | Run a list of tests
 --
@@ -89,13 +94,45 @@ expectEq x y = if x == y then ok else crash $
 tests :: [Test ()] -> Test ()
 tests = msum
 
-atomicLogger :: IO (Text -> IO ())
+withColor :: Color -> IO () -> IO ()
+withColor clr doit = do
+  setSGR [SetColor Foreground Vivid clr]
+  doit
+  setSGR [Reset]
+
+atomicLogger :: IO (Text -> IO (), [Diff String] -> IO ())
 atomicLogger = do
   lock <- newMVar ()
-  pure $ \msg ->
-    -- force msg before acquiring lock
-    let dummy = T.foldl' (\_ ch -> ch == 'a') True msg
-    in dummy `seq` bracket (takeMVar lock) (\_ -> putMVar lock ()) (\_ -> T.putStrLn msg)
+  let noteText msg =
+        -- force msg before acquiring lock
+        let dummy = T.foldl' (\_ ch -> ch == 'a') True msg
+        in dummy `seq` bracket (takeMVar lock) (\_ -> putMVar lock ()) $
+             \_ -> T.putStrLn msg
+
+      noteDiff' chunks = bracket (takeMVar lock) (\_ -> putMVar lock ()) $
+        \_ -> do
+        withColor Red $ T.putStr "expected: "
+        forM_ chunks $ \case
+          Both a _ -> indented a
+          First a  -> withColor Green $ indented a
+          Second _ -> return ()
+        T.putStrLn ""
+
+        withColor Red $ T.putStr "but got: "
+        forM_ chunks $ \case
+          Both a _ -> indented a
+          First _  -> return ()
+          Second a -> withColor Red $ indented a
+        T.putStrLn ""
+        where
+          indented text = case break (== '\n') text of
+            (xs, "") -> putStr xs
+            (xs, _ : ys) -> do
+              putStr $ xs ++ "\n"
+              T.putStr "          "
+              indented ys
+
+  pure (noteText, noteDiff')
 
 -- | A test with a setup and teardown
 using :: IO r -> (r -> IO ()) -> (r -> Test a) -> Test a
@@ -110,17 +147,17 @@ using r cleanup use = Test $ do
 -- | Run all tests whose scope starts with the given prefix
 runOnly :: Text -> Test a -> IO ()
 runOnly prefix t = do
-  logger <- atomicLogger
+  (msgLogger, diffLogger) <- atomicLogger
   seed <- abs <$> Random.randomIO :: IO Int
   let allowed = filter (not . T.null) $ T.splitOn "." prefix
-  run' seed logger allowed t
+  run' seed msgLogger diffLogger allowed t
 
 -- | Rerun all tests with the given seed and whose scope starts with the given prefix
 rerunOnly :: Int -> Text -> Test a -> IO ()
 rerunOnly seed prefix t = do
-  logger <- atomicLogger
+  (msgLogger, diffLogger) <- atomicLogger
   let allowed = filter (not . T.null) $ T.splitOn "." prefix
-  run' seed logger allowed t
+  run' seed msgLogger diffLogger allowed t
 
 -- | Run all tests
 run :: Test a -> IO ()
@@ -130,8 +167,8 @@ run = runOnly ""
 rerun :: Int -> Test a -> IO ()
 rerun seed = rerunOnly seed ""
 
-run' :: Int -> (Text -> IO ()) -> [Text] -> Test a -> IO ()
-run' seed note_ allowed (Test t) = do
+run' :: Int -> (Text -> IO ()) -> ([Diff String] -> IO ()) -> [Text] -> Test a -> IO ()
+run' seed note_ noteDiff_ allowed (Test t) = do
   let !rng_ = Random.mkStdGen seed
   resultsQ <- atomically (newTBQueue 50)
   rngVar <- newTVarIO rng_
@@ -151,7 +188,7 @@ run' seed note_ allowed (Test t) = do
   let line = "------------------------------------------------------------"
   note_ "Raw test output to follow ... "
   note_ line
-  result <- try (runReaderT (void t) (Env rngVar [] resultsQ note_ allowed))
+  result <- try (runReaderT (void t) (Env rngVar [] resultsQ note_ noteDiff_ allowed))
     :: IO (Either SomeException ())
   case result of
     Left e -> note_ $ "Exception while running tests: " <> show' e
