@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP          #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- Modified version of:
@@ -33,10 +33,10 @@ module EasyTest.Diff
   ) where
 
 import           Control.Applicative
+import           Data.Algorithm.Diff
 import           Data.Char
 import           Data.Foldable
-import           Data.List (stripPrefix)
-import           Data.Algorithm.Diff
+import           Data.List           (stripPrefix)
 
 diff :: String -> String -> [Diff String]
 diff expected actual = map (fmap concat) $ getGroupedDiff (partition expected) (partition actual)
@@ -68,7 +68,7 @@ splitEscape xs = splitNumericEscape xs <|> (asum $ map split escapes)
 splitNumericEscape :: String -> Maybe (String, String)
 splitNumericEscape xs = case span isDigit xs of
   ("", _) -> Nothing
-  r -> Just r
+  r       -> Just r
 
 escapes :: [String]
 escapes = [

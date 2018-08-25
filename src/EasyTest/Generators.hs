@@ -1,5 +1,5 @@
-{-# language Rank2Types #-}
-{-# language ScopedTypeVariables #-}
+{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module EasyTest.Generators
   ( -- * Generators
     random
@@ -23,18 +23,18 @@ module EasyTest.Generators
   , mapsOf
   ) where
 
-import Control.Applicative
-import Control.Concurrent.STM
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Reader
-import Data.Map (Map)
-import Data.Word
-import System.Random (Random)
-import qualified Data.Map as Map
-import qualified System.Random as Random
+import           Control.Applicative
+import           Control.Concurrent.STM
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Reader
+import           Data.Map               (Map)
+import qualified Data.Map               as Map
+import           Data.Word
+import           System.Random          (Random)
+import qualified System.Random          as Random
 
-import EasyTest.Internal
+import           EasyTest.Internal
 
 -- | Generate a random value
 random :: forall a. Random a => Test a

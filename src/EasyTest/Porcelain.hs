@@ -1,8 +1,8 @@
-{-# language BangPatterns #-}
-{-# language CPP #-}
-{-# language FlexibleContexts #-}
-{-# language LambdaCase #-}
-{-# language OverloadedStrings #-}
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE CPP               #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module EasyTest.Porcelain
   ( -- * Tests
@@ -32,28 +32,28 @@ module EasyTest.Porcelain
   , io
   ) where
 
-import Control.Applicative
-import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Exception
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Reader
+import           Control.Applicative
+import           Control.Concurrent
+import           Control.Concurrent.STM
+import           Control.Exception
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Reader
 #if !(MIN_VERSION_base(4,11,0))
-import Data.Semigroup
+import           Data.Semigroup
 #endif
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import Data.CallStack
-import System.Exit
 import qualified Control.Concurrent.Async as A
-import qualified Data.Map as Map
-import qualified System.Random as Random
-import System.Console.ANSI
+import           Data.CallStack
+import qualified Data.Map                 as Map
+import           Data.Text                (Text)
+import qualified Data.Text                as T
+import qualified Data.Text.IO             as T
+import           System.Console.ANSI
+import           System.Exit
+import qualified System.Random            as Random
 
-import EasyTest.Diff
-import EasyTest.Internal
+import           EasyTest.Diff
+import           EasyTest.Internal
 
 -- | Convenient alias for 'liftIO'
 io :: IO a -> Test a
@@ -61,10 +61,10 @@ io = liftIO
 
 expect :: HasCallStack => Bool -> Test ()
 expect False = crash "unexpected"
-expect True = ok
+expect True  = ok
 
 expectJust :: HasCallStack => Maybe a -> Test ()
-expectJust Nothing = crash "expected Just, got Nothing"
+expectJust Nothing  = crash "expected Just, got Nothing"
 expectJust (Just _) = ok
 
 expectRight :: (Show e, HasCallStack) => Either e a -> Test ()
@@ -191,7 +191,7 @@ run' seed note_ noteDiff_ allowed (Test t) = do
   result <- try (runReaderT (void t) (Env rngVar [] resultsQ note_ noteDiff_ allowed))
     :: IO (Either SomeException ())
   case result of
-    Left e -> note_ $ "Exception while running tests: " <> show' e
+    Left e   -> note_ $ "Exception while running tests: " <> show' e
     Right () -> pure ()
   atomically $ writeTBQueue resultsQ Nothing
   _ <- A.waitCatch rs
@@ -264,7 +264,7 @@ fork' (Test t) = do
     e <- A.waitCatch r
     _ <- atomically $ tryPutTMVar tmvar (envMessages env, Skipped)
     case e of
-      Left _ -> pure Nothing
+      Left _  -> pure Nothing
       Right a -> pure a
   pure $ do
     a <- liftIO (A.wait waiter)

@@ -268,5 +268,5 @@ module EasyTest (
   module EasyTest.Generators
   ) where
 
-import EasyTest.Generators
-import EasyTest.Porcelain
+import           EasyTest.Generators
+import           EasyTest.Porcelain

@@ -1,11 +1,10 @@
-{-# language BangPatterns #-}
-{-# language CPP #-}
-{-# language FlexibleContexts #-}
-{-# language FlexibleInstances #-}
-{-# language MultiParamTypeClasses #-}
-{-# language NamedFieldPuns #-}
-{-# language OverloadedStrings #-}
-{-# language ScopedTypeVariables #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 
 module EasyTest.Internal
   ( -- * Core
@@ -24,37 +23,37 @@ module EasyTest.Internal
   , combineStatus
   ) where
 
-import Control.Applicative
-import Control.Concurrent.STM
-import Control.Exception
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Reader
-import Data.List (isPrefixOf)
+import           Control.Applicative
+import           Control.Concurrent.STM
+import           Control.Exception
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Reader
+import           Data.List              (isPrefixOf)
 #if !(MIN_VERSION_base(4,11,0))
-import Data.Semigroup
+import           Data.Semigroup
 #endif
-import Data.String (IsString(..))
-import Data.Text (Text)
-import qualified Data.Text as T
-import GHC.Exts (fromList, toList)
+import           Data.String            (IsString (..))
+import           Data.Text              (Text)
+import qualified Data.Text              as T
+import           GHC.Exts               (fromList, toList)
 #if MIN_VERSION_base(4,9,0)
-import GHC.Stack
+import           GHC.Stack
 #else
-import Data.CallStack
+import           Data.CallStack
 #endif
-import qualified System.Random as Random
+import qualified System.Random          as Random
 
-import EasyTest.Diff
+import           EasyTest.Diff
 
 -- | Status of a test
 data Status = Failed | Passed !Int | Skipped
 
 combineStatus :: Status -> Status -> Status
-combineStatus Skipped s = s
-combineStatus s Skipped = s
-combineStatus Failed _ = Failed
-combineStatus _ Failed = Failed
+combineStatus Skipped s             = s
+combineStatus s Skipped             = s
+combineStatus Failed _              = Failed
+combineStatus _ Failed              = Failed
 combineStatus (Passed n) (Passed m) = Passed (n + m)
 
 instance Semigroup Status where
@@ -68,12 +67,12 @@ instance Monoid Status where
 #endif
 
 data Env =
-  Env { envRng :: TVar Random.StdGen
+  Env { envRng      :: TVar Random.StdGen
       , envMessages :: [Text]
-      , envResults :: TBQueue (Maybe (TMVar ([Text], Status)))
-      , envNote :: Text -> IO ()
+      , envResults  :: TBQueue (Maybe (TMVar ([Text], Status)))
+      , envNote     :: Text -> IO ()
       , envNoteDiff :: [Diff String] -> IO ()
-      , envAllow :: [Text] }
+      , envAllow    :: [Text] }
 
 -- | Tests are values of type @Test a@, and 'Test' forms a monad with access to:
 --
@@ -215,7 +214,7 @@ instance Monad Test where
   Test a >>= f = Test $ do
     a' <- a
     case a' of
-      Nothing -> pure Nothing
+      Nothing  -> pure Nothing
       Just a'' -> let Test t = f a'' in t
 
 instance Functor Test where
