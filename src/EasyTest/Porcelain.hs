@@ -45,6 +45,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.CallStack
 import System.Exit
+import System.IO
 import qualified Control.Concurrent.Async as A
 import qualified Data.Map as Map
 import qualified System.Random as Random
@@ -95,7 +96,20 @@ atomicLogger = do
   pure $ \msg ->
     -- force msg before acquiring lock
     let dummy = T.foldl' (\_ ch -> ch == 'a') True msg
-    in dummy `seq` bracket (takeMVar lock) (\_ -> putMVar lock ()) (\_ -> T.putStrLn msg)
+    in dummy `seq` bracket (takeMVar lock) (\_ -> putMVar lock ()) (\_ -> T.putStrLn $ sanitize msg)
+
+sanitize :: Text -> Text
+sanitize msg = if isUnicodeLocale
+    then msg
+    else T.replace "✅" "!"
+       . T.replace "❌" "X"
+       . T.replace "😶" ":/"
+       . T.replace "👍" ":D"
+       . T.replace "🎉" ":P"
+       $ msg
+
+isUnicodeLocale :: Bool
+isUnicodeLocale = elem (show localeEncoding) $ map show [utf8, utf8_bom, utf16, utf16le, utf16be, utf32, utf32le, utf32be]
 
 -- | A test with a setup and teardown
 using :: IO r -> (r -> IO ()) -> (r -> Test a) -> Test a
