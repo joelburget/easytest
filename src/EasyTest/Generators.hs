@@ -29,6 +29,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.Map (Map)
+import Data.Maybe ( fromJust )
 import Data.Word
 import System.Random (Random)
 import qualified Data.Map as Map
@@ -107,8 +108,8 @@ word8' = random'
 pick :: [a] -> Test a
 pick as = let n = length as; ind = picker n as in do
   i <- int' 0 (n - 1)
-  Just a <- pure (ind i)
-  pure a
+  a <- pure (ind i)
+  pure (fromJust a)             -- TODO: fromJust is not a total function
 
 picker :: Int -> [a] -> (Int -> Maybe a)
 picker _ [] = const Nothing
