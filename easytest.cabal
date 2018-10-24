@@ -1,6 +1,6 @@
 name:          easytest
 category:      Testing
-version:       0.2
+version:       0.2.1
 license:       MIT
 cabal-version: >= 1.8
 license-file:  LICENSE
