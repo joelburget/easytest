@@ -31,18 +31,17 @@ module EasyTest.Porcelain
 
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Writer.Strict (runWriter)
-import           Control.Monad.Writer.Class (tell)
-import           Data.List (isPrefixOf)
+import           Data.List (isPrefixOf, intercalate)
 #if !(MIN_VERSION_base(4,11,0))
 import           Data.Semigroup
 #endif
 import Data.String (fromString)
 import           Data.CallStack
+import Data.List.Split (splitOn)
 
 import           EasyTest.Internal
 
 import Hedgehog hiding (Test)
-import Hedgehog.Internal.Property (PropertyName(PropertyName))
 
 
 expect :: (HasCallStack) => Bool -> Test ()
@@ -70,14 +69,10 @@ expectLeftNoShow (Right _) = crash $ "expected Left, got Right"
 expectLeftNoShow (Left _)  = ok
 
 expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Test ()
-expectEq a b = do
-  name <- getPropertyName
-  tell [(name, property' $ a === b)]
+expectEq a b = testProperty $ property' $ a === b
 
 expectNeq :: (Eq a, Show a, HasCallStack) => a -> a -> Test ()
-expectNeq a b = do
-  name <- getPropertyName
-  tell [(name, property' $ a /== b)]
+expectNeq a b = testProperty $ property' $ a === b
 
 -- | Run a list of tests
 --
@@ -95,19 +90,27 @@ tests = sequence_
 --  liftIO (cleanup r')
 --  pure a
 
----- | Run all tests whose scope starts with the given prefix
--- runOnly :: Text -> Test a -> IO ()
+mkGroup :: GroupName -> [([String], Property)] -> Group
+mkGroup name props = Group name $ flip fmap props $ \(path, prop) ->
+  case path of
+    [] -> ("(unnamed)", prop)
+    _  -> (fromString (intercalate "." path), prop)
+
+-- | Run all tests whose scope starts with the given prefix
 runOnly :: String -> Test () -> IO ()
 runOnly prefix t = do
   let ((), props) = runWriter $ runReaderT (unTest t) (Env [])
-      props' = filter (\(PropertyName name, _) -> prefix `isPrefixOf` name)
+      prefix' = splitOn "." prefix
+      props' = filter (\(name, _) -> prefix' `isPrefixOf` name)
         props
+
       -- props' = flip fmap props $ \(pname@(PropertyName name), prop) ->
       --   case prefix `isPrefixOf` name of
       --     False -> (pname, property' $ do { note "skipped"; success; })
       --     True  -> (pname, prop)
       -- TODO: show skipped
-      group = Group (fromString $ "runOnly " ++ show prefix) props'
+      group = mkGroup (fromString $ "runOnly " ++ show prefix) props'
+
   void $ checkSequential group
 
 ---- | Rerun all tests with the given seed and whose scope starts with the given prefix
@@ -119,9 +122,9 @@ runOnly prefix t = do
 
 -- | Run all tests
 run :: Test () -> IO ()
-run t =  -- runOnly ""
+run t =
   let ((), props) = runWriter $ runReaderT (unTest t) (Env [])
-      group = Group "run" props
+      group = mkGroup "run" props
   in void $ checkSequential group
 
 -- | Rerun all tests with the given seed
@@ -140,12 +143,8 @@ note' = footnoteShow
 
 ---- | Record a successful test at the current scope
 ok :: Test ()
-ok = do
-  name <- getPropertyName
-  testProperty $ property' success
+ok = testProperty $ property' success
 
 -- | Explicitly skip this test
 skip :: Test ()
-skip = do
-  name <- getPropertyName
-  testProperty $ property' discard
+skip = testProperty $ property' discard

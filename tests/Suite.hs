@@ -31,11 +31,10 @@ main = do
   runOnly "b" suite1
   runOnly "b" $ tests [suite1, scope "xyz" (crash "never run")]
   runOnly "b.c" $ tests [suite1, scope "b" (crash "never run")]
-  -- TODO: fix
-  -- runOnly "x.go" $ tests
-  --   [ scope "x.go to" (crash "never run")
-  --   , scope "x.go" ok
-  --   ]
+  runOnly "x.go" $ tests
+    [ scope "x.go to" (crash "never run")
+    , scope "x.go" ok
+    ]
   runOnly "x.go to" $ tests
     [ scope "x.go to" ok
     , scope "x.go" (crash "never run")

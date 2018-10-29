@@ -14,7 +14,6 @@ module EasyTest.Internal
   , Env(..)
   , Test(..)
   , property'
-  , getPropertyName
   , testProperty
   ) where
 
@@ -25,12 +24,12 @@ import           Data.List              (intercalate)
 #if !(MIN_VERSION_base(4,11,0))
 import           Data.Semigroup
 #endif
-import           Data.String            (IsString (..))
 #if MIN_VERSION_base(4,9,0)
 import           GHC.Stack
 #else
 import           Data.CallStack
 #endif
+import Data.List.Split (splitOn)
 
 import Hedgehog hiding (Test)
 
@@ -55,21 +54,20 @@ data Env = Env
 --
 -- Using any or all of these capabilities, you assemble 'Test' values into a "test suite" (just another 'Test' value) using ordinary Haskell code, not framework magic. Notice that to generate a list of random values, we just 'replicateM' and 'forM' as usual.
 newtype Test a = Test
-  { unTest :: ReaderT Env (Writer [(PropertyName, Property)]) a }
+  { unTest :: ReaderT Env (Writer [([String], Property)]) a }
   deriving (Functor, Applicative, Monad, MonadReader Env,
-    MonadWriter [(PropertyName, Property)])
+    MonadWriter [([String], Property)])
 
 property' :: HasCallStack => PropertyT IO () -> Property
 property' = withTests 1 . property
+
+getPropertyName :: Test [String]
+getPropertyName = Test $ ReaderT $ \(Env scopes) -> pure scopes
 
 testProperty :: HasCallStack => Property -> Test ()
 testProperty prop = do
   name <- getPropertyName
   Test $ ReaderT $ \_ -> tell [ (name, prop) ]
-
-getPropertyName :: Test PropertyName
-getPropertyName = Test $ ReaderT $ \(Env scopes) ->
-  pure $ fromString $ intercalate "." scopes
 
 crash :: HasCallStack => String -> Test ()
 crash msg = do
@@ -80,7 +78,7 @@ crash msg = do
 -- | Label a test. Can be nested. A "." is placed between nested
 -- scopes, so @scope "foo" . scope "bar"@ is equivalent to @scope "foo.bar"@
 scope :: String -> Test a -> Test a
-scope msg = local $ \(Env scopes) -> Env (scopes <> [msg])
+scope msg = local $ \(Env scopes) -> Env (scopes <> splitOn "." msg)
 
 -- | Prepend the current scope to a logging message
 noteScoped :: String -> Test ()
