@@ -27,6 +27,7 @@ module EasyTest.Porcelain
   , skip
   , crash
   , note
+  , testProperty
   ) where
 
 import           Control.Monad.Reader
