@@ -30,7 +30,6 @@ module EasyTest.Porcelain
   ) where
 
 import           Control.Monad (void)
-import           Control.Monad.IO.Class
 import           Data.List (intercalate)
 #if !(MIN_VERSION_base(4,11,0))
 import           Data.Semigroup
@@ -39,9 +38,10 @@ import           Data.String (fromString)
 import           Data.CallStack
 import           Data.List.Split (splitOn)
 
-import           EasyTest.Internal
-
 import           Hedgehog hiding (Test)
+
+import           EasyTest.Internal
+import           EasyTest.Hedgehog
 
 
 expect :: HasCallStack => Bool -> Tree
@@ -75,8 +75,6 @@ expectNeq :: (Eq a, Show a, HasCallStack) => a -> a -> Tree
 expectNeq a b = testProperty $ property' $ a === b
 
 -- | Run a list of tests
---
--- This specializes 'sequence_'.
 tests :: [Tree] -> Tree
 tests = Internal . zip (show <$> [(1 :: Int)..])
 
@@ -117,16 +115,13 @@ runOnly prefix t = do
 
   void $ checkSequential group
 
-recheck' :: MonadIO m => Size -> Seed -> Group -> m ()
-recheck' = undefined -- size seed (Group name props) = checkGroupWith
-
 -- | Rerun all tests with the given seed and whose scope starts with the given
 -- prefix
-rerunOnly :: Seed -> String -> Tree -> IO ()
+rerunOnly :: Seed -> String -> Tree -> IO Bool
 rerunOnly seed prefix t = do
   let props = runTreeOnly (splitOn "." prefix) t
       name = fromString $ "rerunOnly " ++ show prefix
-  recheck' (Size 1) seed $ mkGroup name props
+  recheck' seed $ mkGroup name props
 
 -- | Run all tests
 run :: Tree -> IO ()
@@ -135,8 +130,8 @@ run t =
       group = mkGroup "run" props
   in void $ checkSequential group
 
--- | Rerun all tests with the given seed XXX this is broken
-rerun :: Seed -> Tree -> IO ()
+-- | Rerun all tests with the given seed
+rerun :: Seed -> Tree -> IO Bool
 rerun seed t = rerunOnly seed "" t
 
 -- | Log a string

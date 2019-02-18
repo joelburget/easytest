@@ -75,6 +75,7 @@ library
 
   exposed-modules:
     EasyTest
+    EasyTest.Hedgehog
     EasyTest.Internal
 
   other-modules:
@@ -84,6 +85,7 @@ library
     base                      >= 4.5      && <= 5,
     call-stack                >= 0.1,
     hedgehog                  >= 0.6,
+    stm,
     -- for splitOn:
     split                     >= 0.2.3
 

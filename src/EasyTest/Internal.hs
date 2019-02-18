@@ -6,11 +6,8 @@
 module EasyTest.Internal
   ( -- * Core
     crash
-  -- , note
   , scope
   -- * Internal
-  -- , Env(..)
-  -- , Test(..)
   , Tree(..)
   , property'
   , testProperty
@@ -51,22 +48,11 @@ data Tree
 property' :: HasCallStack => PropertyT IO () -> Property
 property' = withTests 1 . property
 
--- getPropertyName :: Test [String]
--- getPropertyName = Test $ ReaderT $ \(Env scopes) -> pure scopes
-
 testProperty :: HasCallStack => Property -> Tree
 testProperty = Leaf
--- do
---   name <- getPropertyName
---   pure $ Leaf prop
-  -- Test $ ReaderT $ \_ -> tell $ Seq.singleton (name, prop)
 
 crash :: HasCallStack => String -> Tree
 crash msg = Leaf $ property' $ do { footnote msg; failure }
--- do
---   name <- getPropertyName
---   Test $ ReaderT $ \_ -> tell $ Seq.singleton
---     (name, property' $ do { footnote msg; failure })
 
 -- | Label a test. Can be nested. A "." is placed between nested
 -- scopes, so @scope "foo" . scope "bar"@ is equivalent to @scope "foo.bar"@
@@ -74,25 +60,3 @@ scope :: String -> Tree -> Tree
 scope msg tree =
   let newScopes = splitOn "." msg
   in foldr (\scope' test -> Internal [(scope', test)]) tree newScopes
-  -- local $ \(Env scopes) -> Env (scopes <> splitOn "." msg)
-
--- -- | Prepend the current scope to a logging message
--- noteScoped :: String -> Test ()
--- noteScoped msg = do
---   s <- currentScope
---   note (intercalate "." s <> (if null s then "" else " ") <> msg)
-
--- -- | Log a message
--- note :: String -> Tree -> Tree
--- note msg test = do
---   modify _
-
-  -- Test $ ReaderT $ \_ -> tell [ undefined ]
--- do
---   -- TODO: figure out how to do this
---   annotate msg
-  -- pure ()
-
--- -- | The current scope
--- currentScope :: Test [String]
--- currentScope = asks envScope
