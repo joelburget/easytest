@@ -14,6 +14,7 @@ import           Hedgehog.Internal.Region
 import           Hedgehog.Internal.Report
 import           Hedgehog.Internal.Runner    hiding (checkNamed)
 
+-- | 'Hedgehog.Internal.Runner.checkNamed' modified to take a 'Seed'
 checkNamed ::
      MonadIO m
   => Region
@@ -25,11 +26,13 @@ checkNamed ::
 checkNamed region mcolor name seed prop
   = checkRegion region mcolor name 0 seed prop
 
+-- | 'Hedgehog.Internal.Runner.updateSummary' exposed.
 updateSummary :: Region -> TVar Summary -> Maybe UseColor -> (Summary -> Summary) -> IO ()
 updateSummary sregion svar mcolor f = do
   summary <- atomically (modifyTVar' svar f >> readTVar svar)
   setRegion sregion =<< renderSummary mcolor summary
 
+-- | 'Hedgehog.Internal.Runner.checkGroupWith' modified to take a 'Seed'
 checkGroupWith ::
      WorkerCount
   -> Verbosity
@@ -83,6 +86,7 @@ checkGroupWith n verbosity mcolor seed props =
     updateSummary sregion svar mcolor (const summary)
     pure summary
 
+-- 'checkSequential' modified to take a seed
 recheck' :: MonadIO m => Seed -> Group -> m Bool
 recheck' seed (Group group props) = liftIO $ do
   let config = RunnerConfig {
