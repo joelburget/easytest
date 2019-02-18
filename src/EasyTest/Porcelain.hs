@@ -43,38 +43,38 @@ import           EasyTest.Hedgehog
 import           EasyTest.Internal
 
 
-expect :: HasCallStack => Bool -> Tree
+expect :: HasCallStack => Bool -> Test
 expect False = crash "unexpected"
 expect True  = ok
 
-expectJust :: HasCallStack => Maybe a -> Tree
+expectJust :: HasCallStack => Maybe a -> Test
 expectJust Nothing  = crash "expected Just, got Nothing"
 expectJust (Just _) = ok
 
-expectRight :: (Show e, HasCallStack) => Either e a -> Tree
+expectRight :: (Show e, HasCallStack) => Either e a -> Test
 expectRight (Left e)  = crash $ "expected Right, got (Left " ++ show e ++ ")"
 expectRight (Right _) = ok
 
-expectRightNoShow :: (HasCallStack) => Either e a -> Tree
+expectRightNoShow :: (HasCallStack) => Either e a -> Test
 expectRightNoShow (Left _)  = crash $ "expected Right, got Left"
 expectRightNoShow (Right _) = ok
 
-expectLeft :: (Show a, HasCallStack) => Either e a -> Tree
+expectLeft :: (Show a, HasCallStack) => Either e a -> Test
 expectLeft (Right a) = crash $ "expected Left, got (Right " ++ show a ++ ")"
 expectLeft (Left _)  = ok
 
-expectLeftNoShow :: HasCallStack => Either e a -> Tree
+expectLeftNoShow :: HasCallStack => Either e a -> Test
 expectLeftNoShow (Right _) = crash $ "expected Left, got Right"
 expectLeftNoShow (Left _)  = ok
 
-expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Tree
+expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Test
 expectEq a b = testProperty $ property' $ a === b
 
-expectNeq :: (Eq a, Show a, HasCallStack) => a -> a -> Tree
+expectNeq :: (Eq a, Show a, HasCallStack) => a -> a -> Test
 expectNeq a b = testProperty $ property' $ a === b
 
 -- | Run a list of tests
-tests :: [Tree] -> Tree
+tests :: [Test] -> Test
 tests = Internal . zip (show <$> [(1 :: Int)..])
 
 mkGroup :: GroupName -> [([String], Property)] -> Group
@@ -83,12 +83,12 @@ mkGroup name props = Group name $ flip fmap props $ \(path, prop) ->
     [] -> ("(unnamed)", prop)
     _  -> (fromString (intercalate "." path), prop)
 
-runTree :: Tree -> [([String], Property)]
+runTree :: Test -> [([String], Property)]
 runTree (Leaf prop)      = [([], prop)]
 runTree (Internal trees) = concatMap f trees
   where f (name, tree) = addName name $ runTree tree
 
-runTreeOnly :: [String] -> Tree -> [([String], Property)]
+runTreeOnly :: [String] -> Test -> [([String], Property)]
 runTreeOnly [] tree = runTree tree
 runTreeOnly (_:_) tree@Leaf{} = skipTree tree
 runTreeOnly (scope':scopes) (Internal nodes) = concatMap f nodes
@@ -100,37 +100,36 @@ runTreeOnly (scope':scopes) (Internal nodes) = concatMap f nodes
 addName :: String -> [([String], Property)] -> [([String], Property)]
 addName name = fmap $ \(names, prop) -> (name:names, prop)
 
-skipTree :: Tree -> [([String], Property)]
+skipTree :: Test -> [([String], Property)]
 skipTree (Leaf _prop) = [([], property' discard)]
 skipTree (Internal trees) = concatMap f trees
   where f (name, tree) = addName name $ skipTree tree
 
 -- | Run all tests whose scope starts with the given prefix
-runOnly :: String -> Tree -> IO ()
+runOnly :: String -> Test -> IO ()
 runOnly prefix t = do
   let props = runTreeOnly (splitOn "." prefix) t
-      -- TODO: show skipped
       group = mkGroup (fromString $ "runOnly " ++ show prefix) props
 
   void $ checkSequential group
 
 -- | Rerun all tests with the given seed and whose scope starts with the given
 -- prefix
-rerunOnly :: Seed -> String -> Tree -> IO Bool
+rerunOnly :: Seed -> String -> Test -> IO Bool
 rerunOnly seed prefix t = do
   let props = runTreeOnly (splitOn "." prefix) t
       name = fromString $ "rerunOnly " ++ show prefix
   recheck' seed $ mkGroup name props
 
 -- | Run all tests
-run :: Tree -> IO ()
+run :: Test -> IO ()
 run t =
   let props = runTree t
       group = mkGroup "run" props
   in void $ checkSequential group
 
 -- | Rerun all tests with the given seed
-rerun :: Seed -> Tree -> IO Bool
+rerun :: Seed -> Test -> IO Bool
 rerun seed t = rerunOnly seed "" t
 
 -- | Log a string
@@ -142,9 +141,9 @@ note' :: (MonadTest m, Show s) => s -> m ()
 note' = footnoteShow
 
 -- | Record a successful test at the current scope
-ok :: Tree
+ok :: Test
 ok = testProperty $ property' success
 
 -- | Explicitly skip this test
-skip :: Tree
+skip :: Test
 skip = testProperty $ property' discard

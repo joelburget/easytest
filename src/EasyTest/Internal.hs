@@ -5,7 +5,7 @@ module EasyTest.Internal
     crash
   , scope
   -- * Internal
-  , Tree(..)
+  , Test(..)
   , property'
   , testProperty
   ) where
@@ -38,22 +38,22 @@ import           Hedgehog        hiding (Test, test)
 --     * conjunction of tests via 'MonadPlus' (the '<|>' operation runs both tests, even if the first test fails, and the tests function used above is just 'msum').
 --
 -- Using any or all of these capabilities, you assemble 'Test' values into a "test suite" (just another 'Test' value) using ordinary Haskell code, not framework magic. Notice that to generate a list of random values, we just 'replicateM' and 'forM' as usual.
-data Tree
-  = Internal ![(String, Tree)]
+data Test
+  = Internal ![(String, Test)]
   | Leaf !Property
 
 property' :: HasCallStack => PropertyT IO () -> Property
 property' = withTests 1 . property
 
-testProperty :: HasCallStack => Property -> Tree
+testProperty :: HasCallStack => Property -> Test
 testProperty = Leaf
 
-crash :: HasCallStack => String -> Tree
+crash :: HasCallStack => String -> Test
 crash msg = Leaf $ property' $ do { footnote msg; failure }
 
 -- | Label a test. Can be nested. A "." is placed between nested
 -- scopes, so @scope "foo" . scope "bar"@ is equivalent to @scope "foo.bar"@
-scope :: String -> Tree -> Tree
+scope :: String -> Test -> Test
 scope msg tree =
   let newScopes = splitOn "." msg
   in foldr (\scope' test -> Internal [(scope', test)]) tree newScopes

@@ -9,7 +9,7 @@ import           Hedgehog          (forAll, property, (===))
 import qualified Hedgehog.Gen      as Gen
 import qualified Hedgehog.Range    as Range
 
-suite1 :: Tree
+suite1 :: Test
 suite1 = tests
   [ scope "a" ok
   , scope "b.c" ok
@@ -17,7 +17,7 @@ suite1 = tests
   , scope "b" . scope "c" . scope "d" $ ok
   ]
 
-reverseTest :: Tree
+reverseTest :: Test
 reverseTest = scope "list reversal" $ testProperty $ property $ do
   list <- forAll $ Gen.list @_ @Int (Range.linear 0 100)
     (Gen.element [0..100])
