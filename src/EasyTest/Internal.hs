@@ -1,9 +1,7 @@
-{-# LANGUAGE FlexibleInstances            #-}
-{-# LANGUAGE CPP            #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving            #-}
-
-{-# LANGUAGE OverloadedStrings            #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module EasyTest.Internal
   ( -- * Core
@@ -11,16 +9,13 @@ module EasyTest.Internal
   -- , note
   , scope
   -- * Internal
-  , Env(..)
-  , Test(..)
+  -- , Env(..)
+  -- , Test(..)
+  , Tree(..)
   , property'
   , testProperty
   ) where
 
-import           Control.Monad.Reader
-import           Control.Monad.Trans.Writer.Strict
-import           Control.Monad.Writer.Class (MonadWriter)
-import           Data.List              (intercalate)
 #if !(MIN_VERSION_base(4,11,0))
 import           Data.Semigroup
 #endif
@@ -31,12 +26,8 @@ import           Data.CallStack
 #endif
 import Data.List.Split (splitOn)
 
-import Hedgehog hiding (Test)
+import Hedgehog hiding (Test, test)
 
-
-data Env = Env
-  { envScope :: ![String]
-  }
 
 -- | Tests are values of type @Test a@, and 'Test' forms a monad with access to:
 --
@@ -53,68 +44,55 @@ data Env = Env
 --     * conjunction of tests via 'MonadPlus' (the '<|>' operation runs both tests, even if the first test fails, and the tests function used above is just 'msum').
 --
 -- Using any or all of these capabilities, you assemble 'Test' values into a "test suite" (just another 'Test' value) using ordinary Haskell code, not framework magic. Notice that to generate a list of random values, we just 'replicateM' and 'forM' as usual.
-newtype Test a = Test
-  { unTest :: ReaderT Env (Writer [([String], Property)]) a }
-  deriving (Functor, Applicative, Monad, MonadReader Env,
-    MonadWriter [([String], Property)])
+data Tree
+  = Internal ![(String, Tree)]
+  | Leaf !Property
 
 property' :: HasCallStack => PropertyT IO () -> Property
 property' = withTests 1 . property
 
-getPropertyName :: Test [String]
-getPropertyName = Test $ ReaderT $ \(Env scopes) -> pure scopes
+-- getPropertyName :: Test [String]
+-- getPropertyName = Test $ ReaderT $ \(Env scopes) -> pure scopes
 
-testProperty :: HasCallStack => Property -> Test ()
-testProperty prop = do
-  name <- getPropertyName
-  Test $ ReaderT $ \_ -> tell [ (name, prop) ]
+testProperty :: HasCallStack => Property -> Tree
+testProperty = Leaf
+-- do
+--   name <- getPropertyName
+--   pure $ Leaf prop
+  -- Test $ ReaderT $ \_ -> tell $ Seq.singleton (name, prop)
 
-crash :: HasCallStack => String -> Test ()
-crash msg = do
-  name <- getPropertyName
-  Test $ ReaderT $ \_ -> tell
-    [ (name, property' $ do { footnote msg; failure }) ]
+crash :: HasCallStack => String -> Tree
+crash msg = Leaf $ property' $ do { footnote msg; failure }
+-- do
+--   name <- getPropertyName
+--   Test $ ReaderT $ \_ -> tell $ Seq.singleton
+--     (name, property' $ do { footnote msg; failure })
 
 -- | Label a test. Can be nested. A "." is placed between nested
 -- scopes, so @scope "foo" . scope "bar"@ is equivalent to @scope "foo.bar"@
-scope :: String -> Test a -> Test a
-scope msg = local $ \(Env scopes) -> Env (scopes <> splitOn "." msg)
+scope :: String -> Tree -> Tree
+scope msg tree =
+  let newScopes = splitOn "." msg
+  in foldr (\scope' test -> Internal [(scope', test)]) tree newScopes
+  -- local $ \(Env scopes) -> Env (scopes <> splitOn "." msg)
 
--- | Prepend the current scope to a logging message
-noteScoped :: String -> Test ()
-noteScoped msg = do
-  s <- currentScope
-  note (intercalate "." s <> (if null s then "" else " ") <> msg)
+-- -- | Prepend the current scope to a logging message
+-- noteScoped :: String -> Test ()
+-- noteScoped msg = do
+--   s <- currentScope
+--   note (intercalate "." s <> (if null s then "" else " ") <> msg)
 
--- | Log a message
-note :: String -> Test ()
-note msg = do
-  -- TODO: figure out how to do this
-  -- annotate msg
-  pure ()
+-- -- | Log a message
+-- note :: String -> Tree -> Tree
+-- note msg test = do
+--   modify _
 
--- | The current scope
-currentScope :: Test [String]
-currentScope = asks envScope
+  -- Test $ ReaderT $ \_ -> tell [ undefined ]
+-- do
+--   -- TODO: figure out how to do this
+--   annotate msg
+  -- pure ()
 
----- | Catch all exceptions that could occur in the given `Test`
---wrap :: Test a -> Test a
---wrap (Test t) = Test $ MaybeT $ do
---  env <- ask
---  lift $ runWrap env t
-
---runWrap :: Env -> MaybeT (ReaderT Env IO) a -> IO (Maybe a)
---runWrap env t = do
---  result <- try $ runReaderT (runMaybeT t) env
---  case result of
---    Left e -> do
---      envNote env $
---           T.intercalate "." (envScopes env)
---        <> " EXCEPTION: "
---        <> T.pack (show (e :: SomeException))
---      runReaderT (putResult Failed) env
---      pure Nothing
---    Right a -> pure a
-
--- instance IsString (Test a -> Test a) where
---   fromString = scope
+-- -- | The current scope
+-- currentScope :: Test [String]
+-- currentScope = asks envScope

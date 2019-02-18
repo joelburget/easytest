@@ -1,15 +1,15 @@
-{-# language OverloadedStrings #-}
-{-# language TypeApplications  #-}
-{-# language ScopedTypeVariables  #-}
+{-# language OverloadedStrings   #-}
+{-# language TypeApplications    #-}
+{-# language ScopedTypeVariables #-}
 module Main where
 
-import EasyTest
-import EasyTest.Internal
-import Hedgehog (forAll, property, (===))
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
+import           EasyTest
+import           EasyTest.Internal
+import           Hedgehog          (forAll, property, (===))
+import qualified Hedgehog.Gen      as Gen
+import qualified Hedgehog.Range    as Range
 
-suite1 :: Test ()
+suite1 :: Tree
 suite1 = tests
   [ scope "a" ok
   , scope "b.c" ok
@@ -17,7 +17,7 @@ suite1 = tests
   , scope "b" . scope "c" . scope "d" $ ok
   ]
 
-reverseTest :: Test ()
+reverseTest :: Tree
 reverseTest = scope "list reversal" $ testProperty $ property $ do
   list <- forAll $ Gen.list @_ @Int (Range.linear 0 100)
     (Gen.element [0..100])
@@ -48,6 +48,6 @@ main = do
     , expectRightNoShow (Right () :: Either Int ())
 
     -- Uncomment for an example diff:
-    -- , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
+    , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
     ]
   pure ()

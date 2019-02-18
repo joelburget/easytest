@@ -6,8 +6,8 @@
 
 module EasyTest.Porcelain
   ( -- * Tests
-    Test
-  , expect
+    -- Test
+    expect
   , expectJust
   , expectRight
   , expectRightNoShow
@@ -16,11 +16,10 @@ module EasyTest.Porcelain
   , expectEq
   , expectNeq
   , tests
-  -- , using
   , runOnly
-  -- , rerunOnly
+  , rerunOnly
   , run
-  -- , rerun
+  , rerun
   , scope
   , note'
   , ok
@@ -30,66 +29,56 @@ module EasyTest.Porcelain
   , testProperty
   ) where
 
-import           Control.Monad.Reader
-import           Control.Monad.Trans.Writer.Strict (runWriter)
-import           Data.List (isPrefixOf, intercalate)
+import           Control.Monad (void)
+import           Control.Monad.IO.Class
+import           Data.List (intercalate)
 #if !(MIN_VERSION_base(4,11,0))
 import           Data.Semigroup
 #endif
-import Data.String (fromString)
+import           Data.String (fromString)
 import           Data.CallStack
-import Data.List.Split (splitOn)
+import           Data.List.Split (splitOn)
 
 import           EasyTest.Internal
 
-import Hedgehog hiding (Test)
+import           Hedgehog hiding (Test)
 
 
-expect :: (HasCallStack) => Bool -> Test ()
+expect :: HasCallStack => Bool -> Tree
 expect False = crash "unexpected"
 expect True  = ok
 
-expectJust :: (HasCallStack) => Maybe a -> Test ()
+expectJust :: HasCallStack => Maybe a -> Tree
 expectJust Nothing  = crash "expected Just, got Nothing"
 expectJust (Just _) = ok
 
-expectRight :: (Show e, HasCallStack) => Either e a -> Test ()
+expectRight :: (Show e, HasCallStack) => Either e a -> Tree
 expectRight (Left e)  = crash $ "expected Right, got (Left " ++ show e ++ ")"
 expectRight (Right _) = ok
 
-expectRightNoShow :: (HasCallStack) => Either e a -> Test ()
+expectRightNoShow :: (HasCallStack) => Either e a -> Tree
 expectRightNoShow (Left _)  = crash $ "expected Right, got Left"
 expectRightNoShow (Right _) = ok
 
-expectLeft :: (Show a, HasCallStack) => Either e a -> Test ()
+expectLeft :: (Show a, HasCallStack) => Either e a -> Tree
 expectLeft (Right a) = crash $ "expected Left, got (Right " ++ show a ++ ")"
 expectLeft (Left _)  = ok
 
-expectLeftNoShow :: (HasCallStack) => Either e a -> Test ()
+expectLeftNoShow :: HasCallStack => Either e a -> Tree
 expectLeftNoShow (Right _) = crash $ "expected Left, got Right"
 expectLeftNoShow (Left _)  = ok
 
-expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Test ()
+expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Tree
 expectEq a b = testProperty $ property' $ a === b
 
-expectNeq :: (Eq a, Show a, HasCallStack) => a -> a -> Test ()
+expectNeq :: (Eq a, Show a, HasCallStack) => a -> a -> Tree
 expectNeq a b = testProperty $ property' $ a === b
 
 -- | Run a list of tests
 --
 -- This specializes 'sequence_'.
-tests :: [Test ()] -> Test ()
-tests = sequence_
-
----- | A test with a setup and teardown
---using :: IO r -> (r -> IO ()) -> (r -> Test a) -> Test a
---using r cleanup use = Test $ MaybeT $ do
---  r' <- liftIO r
---  env <- ask
---  let Test t = use r'
---  a <- liftIO (runWrap env t)
---  liftIO (cleanup r')
---  pure a
+tests :: [Tree] -> Tree
+tests = Internal . zip (show <$> [(1 :: Int)..])
 
 mkGroup :: GroupName -> [([String], Property)] -> Group
 mkGroup name props = Group name $ flip fmap props $ \(path, prop) ->
@@ -97,42 +86,58 @@ mkGroup name props = Group name $ flip fmap props $ \(path, prop) ->
     [] -> ("(unnamed)", prop)
     _  -> (fromString (intercalate "." path), prop)
 
--- | Run all tests whose scope starts with the given prefix
-runOnly :: String -> Test () -> IO ()
-runOnly prefix t = do
-  let ((), props) = runWriter $ runReaderT (unTest t) (Env [])
-      prefix' = splitOn "." prefix
-      props' = filter (\(name, _) -> prefix' `isPrefixOf` name)
-        props
+runTree :: Tree -> [([String], Property)]
+runTree (Leaf prop)      = [([], prop)]
+runTree (Internal trees) = concatMap f trees
+  where f (name, tree) = addName name $ runTree tree
 
-      -- props' = flip fmap props $ \(pname@(PropertyName name), prop) ->
-      --   case prefix `isPrefixOf` name of
-      --     False -> (pname, property' $ do { note "skipped"; success; })
-      --     True  -> (pname, prop)
+runTreeOnly :: [String] -> Tree -> [([String], Property)]
+runTreeOnly [] tree = runTree tree
+runTreeOnly (_:_) tree@Leaf{} = skipTree tree
+runTreeOnly (scope':scopes) (Internal nodes) = concatMap f nodes
+  where f (scope'', tree) =
+          if scope'' == scope'
+          then runTreeOnly scopes tree
+          else skipTree tree
+
+addName :: String -> [([String], Property)] -> [([String], Property)]
+addName name = fmap $ \(names, prop) -> (name:names, prop)
+
+skipTree :: Tree -> [([String], Property)]
+skipTree (Leaf _prop) = [([], property' discard)]
+skipTree (Internal trees) = concatMap f trees
+  where f (name, tree) = addName name $ skipTree tree
+
+-- | Run all tests whose scope starts with the given prefix
+runOnly :: String -> Tree -> IO ()
+runOnly prefix t = do
+  let props = runTreeOnly (splitOn "." prefix) t
       -- TODO: show skipped
-      group = mkGroup (fromString $ "runOnly " ++ show prefix) props'
+      group = mkGroup (fromString $ "runOnly " ++ show prefix) props
 
   void $ checkSequential group
 
----- | Rerun all tests with the given seed and whose scope starts with the given prefix
---rerunOnly :: Int -> Text -> Test a -> IO ()
---rerunOnly seed prefix t = do
---  (msgLogger, diffLogger) <- atomicLogger
---  let allowed = filter (not . T.null) $ T.splitOn "." prefix
---  run' seed msgLogger diffLogger allowed t
+recheck' :: MonadIO m => Size -> Seed -> Group -> m ()
+recheck' = undefined -- size seed (Group name props) = checkGroupWith
+
+-- | Rerun all tests with the given seed and whose scope starts with the given
+-- prefix
+rerunOnly :: Seed -> String -> Tree -> IO ()
+rerunOnly seed prefix t = do
+  let props = runTreeOnly (splitOn "." prefix) t
+      name = fromString $ "rerunOnly " ++ show prefix
+  recheck' (Size 1) seed $ mkGroup name props
 
 -- | Run all tests
-run :: Test () -> IO ()
+run :: Tree -> IO ()
 run t =
-  let ((), props) = runWriter $ runReaderT (unTest t) (Env [])
+  let props = runTree t
       group = mkGroup "run" props
   in void $ checkSequential group
 
--- | Rerun all tests with the given seed
--- rerun :: Size -> Seed -> Test () -> IO ()
--- rerun size seed t = -- rerunOnly seed ""
---   let ((), props) = runWriter $ runReaderT (unTest t) (Env [])
---   in recheck size seed props
+-- | Rerun all tests with the given seed XXX this is broken
+rerun :: Seed -> Tree -> IO ()
+rerun seed t = rerunOnly seed "" t
 
 -- | Log a string
 note :: MonadTest m => String -> m ()
@@ -142,10 +147,10 @@ note = footnote
 note' :: (MonadTest m, Show s) => s -> m ()
 note' = footnoteShow
 
----- | Record a successful test at the current scope
-ok :: Test ()
+-- | Record a successful test at the current scope
+ok :: Tree
 ok = testProperty $ property' success
 
 -- | Explicitly skip this test
-skip :: Test ()
+skip :: Tree
 skip = testProperty $ property' discard
