@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE CPP               #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE LambdaCase        #-}
@@ -29,19 +28,19 @@ module EasyTest.Porcelain
   , testProperty
   ) where
 
-import           Control.Monad (void)
-import           Data.List (intercalate)
+import           Control.Monad     (void)
+import           Data.List         (intercalate)
 #if !(MIN_VERSION_base(4,11,0))
 import           Data.Semigroup
 #endif
-import           Data.String (fromString)
 import           Data.CallStack
-import           Data.List.Split (splitOn)
+import           Data.List.Split   (splitOn)
+import           Data.String       (fromString)
 
-import           Hedgehog hiding (Test)
+import           Hedgehog          hiding (Test)
 
-import           EasyTest.Internal
 import           EasyTest.Hedgehog
+import           EasyTest.Internal
 
 
 expect :: HasCallStack => Bool -> Tree

@@ -1,7 +1,7 @@
-{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE CPP                        #-}
-{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 
 module EasyTest.Internal
   ( -- * Core
@@ -21,9 +21,9 @@ import           GHC.Stack
 #else
 import           Data.CallStack
 #endif
-import Data.List.Split (splitOn)
+import           Data.List.Split (splitOn)
 
-import Hedgehog hiding (Test, test)
+import           Hedgehog        hiding (Test, test)
 
 
 -- | Tests are values of type @Test a@, and 'Test' forms a monad with access to:

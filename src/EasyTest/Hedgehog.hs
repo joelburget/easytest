@@ -1,17 +1,18 @@
-{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE CPP #-}
 module EasyTest.Hedgehog where
 
 import           Control.Monad.IO.Class
 
-import           Control.Concurrent.STM.TVar (TVar, modifyTVar', readTVar, newTVar)
-import           Control.Monad.STM (atomically)
-import           Hedgehog hiding (Test)
-import Hedgehog.Internal.Config
-import Hedgehog.Internal.Queue
-import Hedgehog.Internal.Property
-import Hedgehog.Internal.Region
-import Hedgehog.Internal.Report
-import Hedgehog.Internal.Runner hiding (checkNamed)
+import           Control.Concurrent.STM.TVar
+  (TVar, modifyTVar', newTVar, readTVar)
+import           Control.Monad.STM           (atomically)
+import           Hedgehog                    hiding (Test)
+import           Hedgehog.Internal.Config
+import           Hedgehog.Internal.Property
+import           Hedgehog.Internal.Queue
+import           Hedgehog.Internal.Region
+import           Hedgehog.Internal.Report
+import           Hedgehog.Internal.Runner    hiding (checkNamed)
 
 checkNamed ::
      MonadIO m
