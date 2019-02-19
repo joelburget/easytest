@@ -1,3 +1,8 @@
+## 0.2.1 (10/24/2018)
+
+* [Fix build errors for GHC 8.6](https://github.com/joelburget/easytest/commit/9bb30ec16671c0ec74835a52290b6508143a368f), [prevent building on GHC before 7.10](https://github.com/joelburget/easytest/pull/15/commits/f6d0ac50fa5a351a30b576567306121d67c0973a)
+* [Only print emojis for Unicode-capable terminals](https://github.com/joelburget/easytest/commit/e3f12612df46a6367693fd4ad47eedf91c35a079)
+
 ## 0.2 (3/27/2018)
 
 * [`expectRight` now shows `Left`s. `expectRightNoShow` replicates the old functionality.](https://github.com/joelburget/easytest/commit/c2d5dccc97dcdb925ebc39c36fcde9ff8d894f77)
