@@ -39,6 +39,7 @@ import           Data.List.Split   (splitOn)
 import           Data.String       (fromString)
 
 import           Hedgehog          hiding (Test)
+import           Hedgehog.Internal.Seed (random)
 
 import           EasyTest.Hedgehog
 import           EasyTest.Internal
@@ -134,7 +135,8 @@ runOnly prefix t = do
   let props = runTreeOnly (splitOn "." prefix) t
       group = mkGroup (fromString $ "runOnly " ++ show prefix) props
 
-  void $ checkSequential group
+  seed <- random
+  void $ recheckSeed seed group
 
 -- | Rerun all tests with the given seed and whose scope starts with the given
 -- prefix
@@ -146,7 +148,9 @@ rerunOnly prefix seed t = do
 
 -- | Run all tests
 run :: Test -> IO ()
-run = void . checkSequential . mkGroup "run" . runTree
+run t = do
+  seed <- random
+  void $ recheckSeed seed $ mkGroup "run" $ runTree t
 
 -- | Rerun all tests with the given seed
 rerun :: Seed -> Test -> IO Bool
