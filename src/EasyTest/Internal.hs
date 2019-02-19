@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE CPP #-}
 
 module EasyTest.Internal
   ( -- * Core
@@ -6,7 +6,7 @@ module EasyTest.Internal
   , scope
   -- * Internal
   , Test(..)
-  , property'
+  , unitProperty
   , testProperty
   ) where
 
@@ -19,8 +19,8 @@ import           GHC.Stack
 import           Data.CallStack
 #endif
 import           Data.List.Split (splitOn)
-
-import           Hedgehog        hiding (Test, test)
+import           Hedgehog
+  (Property, PropertyT, failure, footnote, property, withTests)
 
 
 -- | Tests are values of type @Test a@, and 'Test' forms a monad with access to:
@@ -42,14 +42,14 @@ data Test
   = Internal ![(String, Test)]
   | Leaf !Property
 
-property' :: HasCallStack => PropertyT IO () -> Property
-property' = withTests 1 . property
+unitProperty :: HasCallStack => PropertyT IO () -> Property
+unitProperty = withTests 1 . property
 
 testProperty :: HasCallStack => Property -> Test
 testProperty = Leaf
 
 crash :: HasCallStack => String -> Test
-crash msg = Leaf $ property' $ do { footnote msg; failure }
+crash msg = Leaf $ unitProperty $ do { footnote msg; failure }
 
 -- | Label a test. Can be nested. A "." is placed between nested
 -- scopes, so @scope "foo" . scope "bar"@ is equivalent to @scope "foo.bar"@

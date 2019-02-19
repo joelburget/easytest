@@ -1,11 +1,8 @@
 {-# LANGUAGE CPP               #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module EasyTest.Porcelain
-  ( -- * Tests
-    -- Test
+  ( -- * Assertions
     expect
   , expectJust
   , expectRight
@@ -14,18 +11,22 @@ module EasyTest.Porcelain
   , expectLeftNoShow
   , expectEq
   , expectNeq
+  , ok
+  , skip
+  , crash
+  -- * Structuring tests
   , tests
+  , scope
+  , testProperty
+  , unitTest
+  -- * Running tests
   , runOnly
   , rerunOnly
   , run
   , rerun
-  , scope
-  , note'
-  , ok
-  , skip
-  , crash
+  -- * Notes
+  , noteShow
   , note
-  , testProperty
   ) where
 
 import           Control.Monad     (void)
@@ -42,6 +43,28 @@ import           Hedgehog          hiding (Test)
 import           EasyTest.Hedgehog
 import           EasyTest.Internal
 
+
+-- | Examples:
+--
+-- >>> run $ unitTest $ 1 === 2
+-- > ━━━ run ━━━
+-- >   ✗ (unnamed) failed after 1 test.
+-- >
+-- >        ┏━━ tests/Suite.hs ━━━
+-- >     26 ┃ main :: IO ()
+-- >     27 ┃ main = do
+-- >     28 ┃   run $ unitTest $ 1 === (2 :: Int)
+-- >        ┃   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-- >        ┃   │ Failed (- lhs =/= + rhs)
+-- >        ┃   │ - 1
+-- >        ┃   │ + 2
+-- >
+-- >     This failure can be reproduced by running:
+-- >     > recheck (Size 0) (Seed 2914818620245020776 12314041441884757111) (unnamed)
+-- >
+-- >   ✗ 1 failed.
+unitTest :: HasCallStack => PropertyT IO () -> Test
+unitTest = testProperty . unitProperty
 
 expect :: HasCallStack => Bool -> Test
 expect False = crash "unexpected"
@@ -68,10 +91,10 @@ expectLeftNoShow (Right _) = crash $ "expected Left, got Right"
 expectLeftNoShow (Left _)  = ok
 
 expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Test
-expectEq a b = testProperty $ property' $ a === b
+expectEq a b = unitTest $ a === b
 
 expectNeq :: (Eq a, Show a, HasCallStack) => a -> a -> Test
-expectNeq a b = testProperty $ property' $ a === b
+expectNeq a b = unitTest $ a === b
 
 -- | Run a list of tests
 tests :: [Test] -> Test
@@ -101,7 +124,7 @@ addName :: String -> [([String], Property)] -> [([String], Property)]
 addName name = fmap $ \(names, prop) -> (name:names, prop)
 
 skipTree :: Test -> [([String], Property)]
-skipTree (Leaf _prop) = [([], property' discard)]
+skipTree (Leaf _prop) = [([], unitProperty discard)]
 skipTree (Internal trees) = concatMap f trees
   where f (name, tree) = addName name $ skipTree tree
 
@@ -115,35 +138,32 @@ runOnly prefix t = do
 
 -- | Rerun all tests with the given seed and whose scope starts with the given
 -- prefix
-rerunOnly :: Seed -> String -> Test -> IO Bool
-rerunOnly seed prefix t = do
+rerunOnly :: String -> Seed -> Test -> IO Bool
+rerunOnly prefix seed t = do
   let props = runTreeOnly (splitOn "." prefix) t
       name = fromString $ "rerunOnly " ++ show prefix
-  recheck' seed $ mkGroup name props
+  recheckSeed seed $ mkGroup name props
 
 -- | Run all tests
 run :: Test -> IO ()
-run t =
-  let props = runTree t
-      group = mkGroup "run" props
-  in void $ checkSequential group
+run = void . checkSequential . mkGroup "run" . runTree
 
 -- | Rerun all tests with the given seed
 rerun :: Seed -> Test -> IO Bool
-rerun seed t = rerunOnly seed "" t
+rerun = rerunOnly ""
 
 -- | Log a string
 note :: MonadTest m => String -> m ()
 note = footnote
 
 -- | Log a showable value
-note' :: (MonadTest m, Show s) => s -> m ()
-note' = footnoteShow
+noteShow :: (MonadTest m, Show s) => s -> m ()
+noteShow = footnoteShow
 
 -- | Record a successful test at the current scope
 ok :: Test
-ok = testProperty $ property' success
+ok = unitTest success
 
 -- | Explicitly skip this test
 skip :: Test
-skip = testProperty $ property' discard
+skip = unitTest discard

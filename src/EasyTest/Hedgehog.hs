@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-module EasyTest.Hedgehog where
+module EasyTest.Hedgehog (recheckSeed) where
 
 import           Control.Monad.IO.Class
 
@@ -86,9 +86,9 @@ checkGroupWith n verbosity mcolor seed props =
     updateSummary sregion svar mcolor (const summary)
     pure summary
 
--- 'checkSequential' modified to take a seed
-recheck' :: MonadIO m => Seed -> Group -> m Bool
-recheck' seed (Group group props) = liftIO $ do
+-- | 'Hedgehog.checkSequential' modified to take a seed
+recheckSeed :: MonadIO m => Seed -> Group -> m Bool
+recheckSeed seed (Group group props) = liftIO $ do
   let config = RunnerConfig {
         runnerWorkers =
           Just 1
