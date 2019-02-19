@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleContexts #-}
 -- |
 -- Module      : EasyTest.Internal
 -- Copyright   : (c) Joel Burget, 2018-2019
