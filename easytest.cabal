@@ -55,7 +55,7 @@ description:
 build-type:    Simple
 extra-source-files: CHANGES.md
 data-files:
-tested-with: GHC == 7.10.3, GHC == 8.0.2, GHC == 8.2.2, GHC == 8.4.3, GHC == 8.6.1
+tested-with: GHC == 8.0.2, GHC == 8.2.2, GHC == 8.4.3, GHC == 8.6.3
 
 source-repository head
   type: git
