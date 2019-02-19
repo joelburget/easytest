@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP               #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- |
@@ -118,41 +119,42 @@ mkGroup name props = Group name $ flip fmap props $ \(path, prop) ->
 
 -- | Flatten a test tree. Use with 'mkGroup'
 runTree :: Test -> [([String], Property)]
-runTree (Leaf prop)      = [([], prop)]
-runTree (Sequence trees) = concatMap (addNames runTree) $ zip seqNames trees
-runTree (Internal trees) = concatMap (addNames runTree) trees
+runTree = runTree' []
+
+runTree' :: [String] -> Test -> [([String], Property)]
+runTree' stack = \case
+  Leaf prop      -> [(reverse stack, prop)]
+  Sequence trees -> concatMap go $ zip seqNames trees
+  Internal trees -> concatMap go trees
+  where go (name, tree) = runTree' (name:stack) tree
 
 -- | Flatten a subtree of tests. Use with 'mkGroup'
 runTreeOnly :: [String] -> Test -> [([String], Property)]
-runTreeOnly []              tree             = runTree tree
-runTreeOnly (_:_)           tree@Leaf{}      = skipTree tree
-runTreeOnly scopes          (Sequence nodes)
-  = concatMap (addNames $ runTreeOnly scopes) $ zip seqNames nodes
-runTreeOnly (scope':scopes) (Internal nodes)
-  = addNames' scope' $ concatMap f nodes
-  where f (scope'', tree) =
-          if scope'' == scope'
-          then runTreeOnly scopes tree
-          else skipTree tree
+runTreeOnly = runTreeOnly' [] where
+
+  runTreeOnly' stack []              tree             = runTree' stack tree
+  runTreeOnly' stack (_:_)           tree@Leaf{}      = skipTree' stack tree
+  runTreeOnly' stack scopes          (Sequence nodes)
+    = concatMap go $ zip seqNames nodes
+    where go (name, tree) = runTreeOnly' (name:stack) scopes tree
+  runTreeOnly' stack (scope':scopes) (Internal nodes)
+    = concatMap go nodes
+    where go (name, tree) =
+            if name == scope'
+            then runTreeOnly' (name:stack) scopes tree
+            else skipTree'    (name:stack)        tree
 
 -- | Skip this test tree (mark all properties as skipped).
-skipTree :: Test -> [([String], Property)]
-skipTree (Leaf _prop)     = [([], unitProperty discard)]
-skipTree (Sequence trees) = concatMap (addNames skipTree) $ zip seqNames trees
-skipTree (Internal trees) = concatMap (addNames skipTree) trees
+skipTree' :: [String] -> Test -> [([String], Property)]
+skipTree' stack = \case
+  Leaf _prop     -> [(reverse stack, unitProperty discard)]
+  Sequence trees -> concatMap go $ zip seqNames trees
+  Internal trees -> concatMap go trees
+
+  where go (name, tree) = skipTree' (name:stack) tree
 
 seqNames :: [String]
 seqNames = map (\i -> "(" ++ show i ++ ")") [(1 :: Int)..]
-
-addNames' :: String -> [([String], Property)] -> [([String], Property)]
-addNames' name = fmap (\(names, prop) -> (name:names, prop))
-
--- | Helper to label flattened test sequences
-addNames
-  :: (Test -> [([String], Property)])
-  -> (String, Test)
-  -> [([String], Property)]
-addNames f (name, tree) = (\(names, prop) -> (name:names, prop)) <$> f tree
 
 -- | Run all tests whose scope starts with the given prefix
 runOnly :: String -> Test -> IO ()
