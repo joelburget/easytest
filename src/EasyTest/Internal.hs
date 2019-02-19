@@ -30,23 +30,9 @@ import           Hedgehog
   (Property, PropertyT, failure, footnote, property, withTests)
 
 
--- | Tests are values of type @Test a@, and 'Test' forms a monad with access to:
---
---     * I/O (via 'liftIO')
---
---     * failure (via 'crash', which yields a stack trace, or 'fail', which does not)
---
---     * logging (via 'EasyTest.note', 'EasyTest.noteScoped', or 'EasyTest.note'')
---
---     * hierarchically-named subcomputations (under 'EasyTest.scope') which can be switched on and off via 'EasyTest.runOnly'
---
---     * parallelism (via 'EasyTest.fork')
---
---     * conjunction of tests via 'MonadPlus' (the '<|>' operation runs both tests, even if the first test fails, and the tests function used above is just 'msum').
---
--- Using any or all of these capabilities, you assemble 'Test' values into a "test suite" (just another 'Test' value) using ordinary Haskell code, not framework magic. Notice that to generate a list of random values, we just 'replicateM' and 'forM' as usual.
 data Test
   = Internal ![(String, Test)]
+  | Sequence ![Test]
   | Leaf !Property
 
 unitProperty :: HasCallStack => PropertyT IO () -> Property
