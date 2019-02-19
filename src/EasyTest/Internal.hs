@@ -18,9 +18,6 @@ module EasyTest.Internal
   , testProperty
   ) where
 
-#if !(MIN_VERSION_base(4,11,0))
-import           Data.Semigroup
-#endif
 #if MIN_VERSION_base(4,9,0)
 import           GHC.Stack
 #else

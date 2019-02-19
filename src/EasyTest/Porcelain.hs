@@ -41,9 +41,6 @@ module EasyTest.Porcelain
 
 import           Control.Monad     (void)
 import           Data.List         (intercalate)
-#if !(MIN_VERSION_base(4,11,0))
-import           Data.Semigroup
-#endif
 import           Data.CallStack
 import           Data.List.Split   (splitOn)
 import           Data.String       (fromString)
