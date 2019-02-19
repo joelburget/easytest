@@ -78,8 +78,7 @@ library
     hedgehog                  >= 0.6,
     stm,
     -- for splitOn:
-    split                     >= 0.2.3,
-    transformers
+    split                     >= 0.2.3
 
   if !impl(ghc >= 8.0)
     build-depends: semigroups == 0.18.*
