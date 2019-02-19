@@ -1,6 +1,14 @@
 {-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module      : EasyTest.Porcelain
+-- Copyright   : (c) Joel Burget, 2018-2019
+-- License     : MIT
+-- Maintainer  : joelburget@gmail.com
+-- Stability   : experimental
+--
+-- This module defines the interface for EasyTest.
 module EasyTest.Porcelain
   ( -- * Assertions
     expect

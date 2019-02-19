@@ -1,5 +1,12 @@
 {-# LANGUAGE CPP #-}
-
+-- |
+-- Module      : EasyTest.Internal
+-- Copyright   : (c) Joel Burget, 2018-2019
+-- License     : MIT
+-- Maintainer  : joelburget@gmail.com
+-- Stability   : experimental
+--
+-- This module defines the core internals of easytest.
 module EasyTest.Internal
   ( -- * Core
     crash
