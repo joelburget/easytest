@@ -168,9 +168,6 @@ runWrap env t = do
       pure Nothing
     Right a -> pure a
 
-runWrapUnsafe :: Env -> ReaderT Env IO (Maybe a) -> IO a
-runWrapUnsafe env t = fmap fromJust (runWrap env t)
-
 -- * @allow' `isPrefixOf` messages'@: we're messaging within the allowed range
 -- * @messages' `isPrefixOf` allow'@: we're still building a prefix of the
 --   allowed range but could go deeper
@@ -214,48 +211,21 @@ instance MonadIO Test where
       then wrap $ Test (Just <$> liftIO action)
       else Test (pure Nothing)
 
--- mapReaderT (\ioa -> ioa >>= (\a -> return $ Just a)) 
 instance MonadUnliftIO Test where
-  askUnliftIO = Test $ askUnliftIORWrap askUnliftIOReaderT
+  askUnliftIO = Test
+    $ mapReaderT (\ioa -> ioa >>= (\a -> return $ Just a)) $
+      mapReaderT (\urtIo -> urtIo >>= (\urto -> pure $ testUliftIO urto)) askUnliftIOReaderT
+      -- mapReaderT (\urto -> return $ testUliftIO urto) askUnliftIOReaderT
     where
-      --  ReaderT r m0 (UnliftIO (ReaderT r m0))
       askUnliftIOReaderT :: RT (UnliftIO RT)
       askUnliftIOReaderT = ReaderT $ \r ->
         withUnliftIO $ \u ->
         return (UnliftIO ( (unliftIO u . flip runReaderT r)))
-      askUnliftIORWrap :: RT (UnliftIO RT) -> RT (UnliftIO Test)
-      askUnliftIORWrap rto = mapReaderT (\urt -> testUliftIO urt) rto
       testUliftIO :: UnliftIO RT -> UnliftIO Test
       testUliftIO (UnliftIO ul) = UnliftIO ulio
         where
           ulio :: Test a -> IO a
           ulio (Test t) = fmap fromJust (ul t)
-
-{-
-
-wrapIO :: Test a -> IO a
-wrapIO (Test t) = do
-  -- env <- runReader $ runReaderT t
-  runWrapUnsafe $ runReaderT t -- env t
--}
-
-{-
- askUnliftIO = return $ UnliftIO $ ReaderT $ \r ->
-    withUnliftIO $ \u ->
-    return (UnliftIO (unliftIO u . flip runReaderT r))
-
--}
-    -- env <- ask
-    -- UnliftIO $ wrapIO
-    -- where
-    --   wrapIO :: Test a -> IO a
-    --   wrapIO (Test t) = Test $ do
-    --     env <- ask
-    --     runWrapUnsafe env t
-
-
-  --   withUnliftIO $ \u ->
-  --   return (UnliftIO (unliftIO u . flip runReaderT r))
 
 instance Alternative Test where
   empty = Test (pure Nothing)
