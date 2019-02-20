@@ -27,7 +27,7 @@ import           Data.CallStack
 #endif
 import           Data.List.Split (splitOn)
 import           Hedgehog
-  (Property, PropertyT, failure, footnote, property, withTests)
+  (Property, PropertyT, failure, footnote, property, withTests, withDiscards)
 
 
 data Test
@@ -36,7 +36,7 @@ data Test
   | Leaf !Property
 
 unitProperty :: HasCallStack => PropertyT IO () -> Property
-unitProperty = withTests 1 . property
+unitProperty = withTests 1 . withDiscards 1 . property
 
 testProperty :: HasCallStack => Property -> Test
 testProperty = Leaf
