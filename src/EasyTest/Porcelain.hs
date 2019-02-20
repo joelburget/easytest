@@ -120,7 +120,7 @@ runTree = runTree' []
 runTree' :: [String] -> Test -> [([String], Property)]
 runTree' stack = \case
   Leaf prop      -> [(reverse stack, prop)]
-  Sequence trees -> concatMap go $ zip seqNames trees
+  Sequence trees -> concatMap (runTree' stack) trees
   Internal trees -> concatMap go trees
   where go (name, tree) = runTree' (name:stack) tree
 
@@ -130,11 +130,10 @@ runTreeOnly = runTreeOnly' [] where
 
   runTreeOnly' stack []              tree             = runTree' stack tree
   runTreeOnly' stack (_:_)           tree@Leaf{}      = skipTree' stack tree
-  runTreeOnly' stack scopes          (Sequence nodes)
-    = concatMap go $ zip seqNames nodes
-    where go (name, tree) = runTreeOnly' (name:stack) scopes tree
-  runTreeOnly' stack (scope':scopes) (Internal nodes)
-    = concatMap go nodes
+  runTreeOnly' stack scopes          (Sequence trees)
+    = concatMap (runTreeOnly' stack scopes) trees
+  runTreeOnly' stack (scope':scopes) (Internal trees)
+    = concatMap go trees
     where go (name, tree) =
             if name == scope'
             then runTreeOnly' (name:stack) scopes tree
@@ -144,13 +143,10 @@ runTreeOnly = runTreeOnly' [] where
 skipTree' :: [String] -> Test -> [([String], Property)]
 skipTree' stack = \case
   Leaf _prop     -> [(reverse stack, unitProperty discard)]
-  Sequence trees -> concatMap go $ zip seqNames trees
+  Sequence trees -> concatMap (skipTree' stack) trees
   Internal trees -> concatMap go trees
 
   where go (name, tree) = skipTree' (name:stack) tree
-
-seqNames :: [String]
-seqNames = map (\i -> "(" ++ show i ++ ")") [(1 :: Int)..]
 
 -- | Run all tests whose scope starts with the given prefix
 runOnly :: String -> Test -> IO ()
