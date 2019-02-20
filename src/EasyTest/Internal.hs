@@ -212,9 +212,8 @@ instance MonadIO Test where
       else Test (pure Nothing)
 
 instance MonadUnliftIO Test where
-  askUnliftIO = Test
-    $ mapReaderT (\ioa -> ioa >>= (\a -> return $ Just a)) $
-      mapReaderT (\urtIo -> urtIo >>= (\urto -> pure $ testUliftIO urto)) askUnliftIOReaderT
+  askUnliftIO = Test $ 
+      mapReaderT (\urtIo -> urtIo >>= (\urto -> pure $ Just $ testUliftIO urto)) askUnliftIOReaderT
       -- mapReaderT (\urto -> return $ testUliftIO urto) askUnliftIOReaderT
     where
       askUnliftIOReaderT :: RT (UnliftIO RT)
