@@ -27,11 +27,13 @@ import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.IO.Unlift
 import Control.Monad.Reader
 import Data.List (isPrefixOf)
 #if !(MIN_VERSION_base(4,11,0))
 import Data.Semigroup
 #endif
+import Data.Maybe (fromJust)
 import Data.String (IsString(..))
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -87,7 +89,8 @@ data Env =
 --     * conjunction of tests via 'MonadPlus' (the '<|>' operation runs both tests, even if the first test fails, and the tests function used above is just 'msum').
 --
 -- Using any or all of these capabilities, you assemble 'Test' values into a "test suite" (just another 'Test' value) using ordinary Haskell code, not framework magic. Notice that to generate a list of random values, we just 'replicateM' and 'forM' as usual.
-newtype Test a = Test (ReaderT Env IO (Maybe a))
+type RT = ReaderT Env IO
+newtype Test a = Test (RT (Maybe a))
 
 #if !MIN_VERSION_base(4,9,0)
 prettyCallStack :: CallStack -> String
@@ -165,6 +168,9 @@ runWrap env t = do
       pure Nothing
     Right a -> pure a
 
+runWrapUnsafe :: Env -> ReaderT Env IO (Maybe a) -> IO a
+runWrapUnsafe env t = fmap fromJust (runWrap env t)
+
 -- * @allow' `isPrefixOf` messages'@: we're messaging within the allowed range
 -- * @messages' `isPrefixOf` allow'@: we're still building a prefix of the
 --   allowed range but could go deeper
@@ -207,6 +213,45 @@ instance MonadIO Test where
     if allowed
       then wrap $ Test (Just <$> liftIO action)
       else Test (pure Nothing)
+
+instance MonadUnliftIO Test where
+  askUnliftIO = Test $ mapReaderT (\ioa -> ioa >>= (\a -> return $ Just a)) $ askUnliftIORWrap askUnliftIOReaderT
+    where
+      --  ReaderT r m0 (UnliftIO (ReaderT r m0))
+      askUnliftIOReaderT :: RT (UnliftIO RT)
+      askUnliftIOReaderT = ReaderT $ \r ->
+        withUnliftIO $ \u ->
+        return (UnliftIO ( (unliftIO u . flip runReaderT r)))
+      askUnliftIORWrap :: RT (UnliftIO RT) -> RT (UnliftIO Test)
+      askUnliftIORWrap rto = mapReaderT (\urt -> urt) rto
+      -- fmap2 :: (Functor m1, Functor m2) => (b -> c) -> m1 (m2 b) -> m1 (m2 c)
+      -- fmap2 f = fmap (\b -> fmap f b)
+
+{-
+
+wrapIO :: Test a -> IO a
+wrapIO (Test t) = do
+  -- env <- runReader $ runReaderT t
+  runWrapUnsafe $ runReaderT t -- env t
+-}
+
+{-
+ askUnliftIO = return $ UnliftIO $ ReaderT $ \r ->
+    withUnliftIO $ \u ->
+    return (UnliftIO (unliftIO u . flip runReaderT r))
+
+-}
+    -- env <- ask
+    -- UnliftIO $ wrapIO
+    -- where
+    --   wrapIO :: Test a -> IO a
+    --   wrapIO (Test t) = Test $ do
+    --     env <- ask
+    --     runWrapUnsafe env t
+
+
+  --   withUnliftIO $ \u ->
+  --   return (UnliftIO (unliftIO u . flip runReaderT r))
 
 instance Alternative Test where
   empty = Test (pure Nothing)
