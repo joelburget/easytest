@@ -213,7 +213,9 @@ instance MonadIO Test where
 
 instance MonadUnliftIO Test where
   askUnliftIO = Test $
-      mapReaderT (\urtIo -> urtIo >>= (\urto -> pure $ Just $ testUliftIO urto)) askUnliftIO
+      mapReaderT (\urtIo -> urtIo >>=
+        (\urto -> pure $ Just $ testUliftIO urto)
+      ) askUnliftIO
     where
       testUliftIO :: UnliftIO RT -> UnliftIO Test
       testUliftIO (UnliftIO ul) = UnliftIO ulio
