@@ -214,8 +214,9 @@ instance MonadIO Test where
       then wrap $ Test (Just <$> liftIO action)
       else Test (pure Nothing)
 
+-- mapReaderT (\ioa -> ioa >>= (\a -> return $ Just a)) 
 instance MonadUnliftIO Test where
-  askUnliftIO = Test $ mapReaderT (\ioa -> ioa >>= (\a -> return $ Just a)) $ askUnliftIORWrap askUnliftIOReaderT
+  askUnliftIO = Test $ askUnliftIORWrap askUnliftIOReaderT
     where
       --  ReaderT r m0 (UnliftIO (ReaderT r m0))
       askUnliftIOReaderT :: RT (UnliftIO RT)
@@ -223,9 +224,12 @@ instance MonadUnliftIO Test where
         withUnliftIO $ \u ->
         return (UnliftIO ( (unliftIO u . flip runReaderT r)))
       askUnliftIORWrap :: RT (UnliftIO RT) -> RT (UnliftIO Test)
-      askUnliftIORWrap rto = mapReaderT (\urt -> urt) rto
-      -- fmap2 :: (Functor m1, Functor m2) => (b -> c) -> m1 (m2 b) -> m1 (m2 c)
-      -- fmap2 f = fmap (\b -> fmap f b)
+      askUnliftIORWrap rto = mapReaderT (\urt -> testUliftIO urt) rto
+      testUliftIO :: UnliftIO RT -> UnliftIO Test
+      testUliftIO (UnliftIO ul) = UnliftIO ulio
+        where
+          ulio :: Test a -> IO a
+          ulio (Test t) = fmap fromJust (ul t)
 
 {-
 
