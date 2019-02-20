@@ -5,7 +5,7 @@ module Main where
 
 import           EasyTest
 import           EasyTest.Internal
-import           Hedgehog          (forAll, property, (===))
+import           Hedgehog          (forAll, (===))
 import qualified Hedgehog.Gen      as Gen
 import qualified Hedgehog.Range    as Range
 
@@ -18,7 +18,7 @@ suite1 = tests
   ]
 
 reverseTest :: Test
-reverseTest = scope "list reversal" $ testProperty $ property $ do
+reverseTest = scope "list reversal" $ propertyTest $ do
   list <- forAll $ Gen.list @_ @Int (Range.linear 0 100)
     (Gen.element [0..100])
   reverse (reverse list) === list

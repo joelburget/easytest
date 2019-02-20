@@ -18,6 +18,11 @@ module EasyTest.Internal
   -- * Hedgehog re-exports
   , Property
   , PropertyT
+  , MonadTest
+  , (===)
+  , (/==)
+  , Seed
+  , Group
   ) where
 
 #if MIN_VERSION_base(4,9,0)
@@ -27,7 +32,7 @@ import           Data.CallStack
 #endif
 import           Data.List.Split (splitOn)
 import           Hedgehog
-  (Property, PropertyT, failure, footnote, property, withTests, withDiscards)
+  (Property, PropertyT, failure, footnote, property, withTests, withDiscards, MonadTest, (===), (/==), Seed, Group)
 
 
 data Test
@@ -41,6 +46,7 @@ unitProperty = withTests 1 . withDiscards 1 . property
 testProperty :: HasCallStack => Property -> Test
 testProperty = Leaf
 
+-- | Record a failure with a given message
 crash :: HasCallStack => String -> Test
 crash msg = Leaf $ unitProperty $ do { footnote msg; failure }
 

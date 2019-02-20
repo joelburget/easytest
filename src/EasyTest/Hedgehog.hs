@@ -8,11 +8,7 @@
 --
 -- This module defines 'recheckSeed', which just checks a 'Group' using a given
 -- seed.
-module EasyTest.Hedgehog
-  ( recheckSeed
-  , Seed
-  , Group
-  ) where
+module EasyTest.Hedgehog (recheckSeed) where
 
 import           Control.Monad.IO.Class
 
