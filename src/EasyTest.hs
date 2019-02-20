@@ -264,7 +264,7 @@ That's it! Just use ordinary monadic code to generate any testing data and to ru
 -}
 
 module EasyTest (
-  module EasyTest.Porcelain,
+    module EasyTest.Porcelain
   ) where
 
 import           EasyTest.Porcelain

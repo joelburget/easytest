@@ -28,13 +28,13 @@ module EasyTest.Porcelain
   , testProperty
   , unitTest
   -- * Running tests
-  , runOnly
-  , rerunOnly
   , run
+  , runOnly
   , rerun
+  , rerunOnly
   -- * Notes
-  , noteShow
   , note
+  , noteShow
   ) where
 
 import           Control.Monad     (void)

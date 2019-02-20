@@ -15,6 +15,9 @@ module EasyTest.Internal
   , Test(..)
   , unitProperty
   , testProperty
+  -- * Hedgehog re-exports
+  , Property
+  , PropertyT
   ) where
 
 #if MIN_VERSION_base(4,9,0)
