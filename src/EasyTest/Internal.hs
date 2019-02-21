@@ -14,7 +14,7 @@ module EasyTest.Internal
   -- * Internal
   , Test(..)
   , unitProperty
-  , testProperty
+  , mkTest
   -- * Hedgehog re-exports
   , Property
   , PropertyT
@@ -43,8 +43,8 @@ data Test
 unitProperty :: HasCallStack => PropertyT IO () -> Property
 unitProperty = withTests 1 . withDiscards 1 . property
 
-testProperty :: HasCallStack => Property -> Test
-testProperty = Leaf
+mkTest :: HasCallStack => Property -> Test
+mkTest = Leaf
 
 -- | Record a failure with a given message
 crash :: HasCallStack => String -> Test

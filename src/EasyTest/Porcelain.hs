@@ -70,10 +70,10 @@ import           EasyTest.Internal
 -- >
 -- >   ✗ 1 failed.
 unitTest :: HasCallStack => PropertyT IO () -> Test
-unitTest = testProperty . unitProperty
+unitTest = mkTest . unitProperty
 
 propertyTest :: HasCallStack => PropertyT IO () -> Test
-propertyTest = testProperty . property
+propertyTest = mkTest . property
 
 -- | Record a success if 'True', otherwise record a failure
 expect :: HasCallStack => Bool -> Test

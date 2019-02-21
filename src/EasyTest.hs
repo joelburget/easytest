@@ -22,7 +22,7 @@ suite :: Test ()
 suite = tests
   [ scope "addition.ex1" $ unitTest $ 1 + 1 === 2
   , scope "addition.ex2" $ unitTest $ 2 + 3 === 5
-  , scope "list.reversal" $ testProperty $ property $ do
+  , scope "list.reversal" $ propertyTest $ do
       -- generate lists from size 0 to 10, of Ints in (0,43)
       -- shorthand: listsOf [0..10] (int' 0 43)
       ns @<-@ Gen.list (Range.singleton 10) (Gen.int Range.constantBounded)
