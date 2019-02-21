@@ -178,7 +178,41 @@ reverseTest = scope "list reversal" $ do
 -}
 
 module EasyTest (
-    module EasyTest.Porcelain
+  -- * Tests
+    Test
+  -- * Structuring tests
+  , tests
+  , scope
+  , unitTest
+  , propertyTest
+  -- * Running tests
+  , run
+  , runOnly
+  , rerun
+  , rerunOnly
+  -- -- * Notes
+  -- , note
+  -- , noteShow
+  -- * Assertions
+  , expect
+  , expectJust
+  , expectRight
+  , expectRightNoShow
+  , expectLeft
+  , expectLeftNoShow
+  , expectEq
+  , expectNeq
+  , ok
+  , skip
+  , pending
+  , crash
+  -- * Hedgehog re-exports
+  , (===)
+  , (/==)
+  , Seed
+  , forAll
+  , forAllWith
   ) where
 
-import           EasyTest.Porcelain
+import           EasyTest.Internal
+import Hedgehog hiding (Test)
