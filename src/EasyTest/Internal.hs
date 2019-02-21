@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Rank2Types        #-}
 -- |
 -- Module      : EasyTest.Internal
 -- Copyright   : (c) Joel Burget, 2018-2019
@@ -34,6 +35,7 @@ module EasyTest.Internal
   , expectLeftNoShow
   , expectEq
   , expectNeq
+  , expectPrism
   , ok
   , skip
   , pending
@@ -80,6 +82,11 @@ import           Hedgehog.Internal.Seed     (random)
 import qualified Hedgehog.Internal.Tree     as HT
 
 import           EasyTest.Hedgehog
+
+import Data.Profunctor.Choice
+import Data.Profunctor.Unsafe
+import Data.Monoid (First(..))
+import Control.Applicative (Const(..))
 
 -- | Properties that can be lifted into unit or property tests.
 class Testable t where
@@ -255,6 +262,19 @@ expectEq a b = withFrozenCallStack $ unitTest $ a === b
 -- failure.
 expectNeq :: (Eq a, Show a, HasCallStack) => a -> a -> Test
 expectNeq a b = withFrozenCallStack $ unitTest $ a /== b
+
+foldMapOf :: Getting r s a -> (a -> r) -> s -> r
+foldMapOf l f = getConst #. l (Const #. f)
+{-# INLINE foldMapOf #-}
+
+preview :: Getting (First a) s a -> s -> Maybe a
+preview l = getFirst #. foldMapOf l (First #. Just)
+{-# INLINE preview #-}
+
+expectPrism :: HasCallStack => Prism' s a -> s -> Test
+expectPrism p s = case preview p s of
+  Just _ -> ok
+  Nothing -> crash ""
 
 -- | Run a list of tests
 tests :: [Test] -> Test

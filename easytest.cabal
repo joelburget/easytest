@@ -82,7 +82,8 @@ library
     -- unconstrained so we can rely just on the relevant hedgehog version
     -- bounds.
     mtl,
-    transformers
+    transformers,
+    profunctors, tagged
 
   if !impl(ghc >= 8.0)
     build-depends: semigroups == 0.18.*
