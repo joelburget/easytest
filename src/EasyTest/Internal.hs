@@ -51,7 +51,6 @@ module EasyTest.Internal
   ) where
 
 
-import           Control.Monad     (void)
 import           Data.List         (intercalate)
 import           Data.String       (fromString)
 #if MIN_VERSION_base(4,9,0)
@@ -219,11 +218,11 @@ runOnly prefix t = do
       group = mkGroup (fromString $ "runOnly " ++ show prefix) props
 
   seed <- random
-  void $ recheckSeed seed group
+  recheckSeed seed group
 
 -- | Rerun all tests with the given seed and whose scope starts with the given
 -- prefix
-rerunOnly :: String -> Seed -> Test -> IO Bool
+rerunOnly :: String -> Seed -> Test -> IO ()
 rerunOnly prefix seed t = do
   let props = runTreeOnly (splitOn "." prefix) t
       name = fromString $ "rerunOnly " ++ show prefix
@@ -233,10 +232,10 @@ rerunOnly prefix seed t = do
 run :: Test -> IO ()
 run t = do
   seed <- random
-  void $ recheckSeed seed $ mkGroup "run" $ runTree t
+  recheckSeed seed $ mkGroup "run" $ runTree t
 
 -- | Rerun all tests with the given seed
-rerun :: Seed -> Test -> IO Bool
+rerun :: Seed -> Test -> IO ()
 rerun = rerunOnly ""
 
 -- -- | Log a string

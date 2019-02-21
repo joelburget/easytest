@@ -18,6 +18,8 @@ import           Control.Monad.STM           (atomically)
 #if !(MIN_VERSION_base(4,11,0))
 import           Data.Semigroup
 #endif
+import System.Exit
+
 import           Hedgehog                    hiding (Test)
 import           Hedgehog.Internal.Config
 import           Hedgehog.Internal.Property
@@ -98,8 +100,8 @@ checkGroupWith n verbosity mcolor seed props =
     updateSummary sregion svar mcolor (const summary)
     pure summary
 
--- | 'Hedgehog.checkSequential' modified to take a seed
-recheckSeed :: MonadIO m => Seed -> Group -> m Bool
+-- | 'Hedgehog.checkSequential' modified to take a seed and exit on failure
+recheckSeed :: MonadIO m => Seed -> Group -> m ()
 recheckSeed seed (Group group props) = liftIO $ do
   let config = RunnerConfig {
         runnerWorkers =
@@ -124,6 +126,4 @@ recheckSeed seed (Group group props) = liftIO $ do
   verbosity <- resolveVerbosity (runnerVerbosity config)
   summary <- checkGroupWith n verbosity (runnerColor config) seed props
 
-  pure $
-    summaryFailed summary == 0 &&
-    summaryGaveUp summary == 0
+  if summaryFailed summary > 0 then exitFailure else pure ()
