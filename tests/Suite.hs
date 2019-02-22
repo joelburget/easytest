@@ -48,6 +48,6 @@ main = do
     , expectRightNoShow (Right () :: Either Int ())
 
     -- Uncomment for an example diff:
-    , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
+    -- , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
     ]
   pure ()
