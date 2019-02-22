@@ -5,7 +5,7 @@ License     : MIT
 Maintainer  : joelburget@gmail.com
 Stability   : provisional
 
-EasyTest is a simple testing toolkit, meant to replace most uses of QuickCheck, SmallCheck, HUnit, and frameworks like Tasty, etc. Here's an example usage:
+EasyTest is a simple testing toolkit for unit- and property-testing. It's based on the <http://hackage.haskell.org/package/hedgehog hedgehog> property-testing system. Here's an example usage:
 
 @
 module Main where
@@ -14,21 +14,21 @@ import           EasyTest
 import qualified Hedgehog.Gen   as Gen
 import qualified Hedgehog.Range as Range
 
-suite :: Test
+suite :: 'Test'
 suite = 'tests'
-  [ 'scope' "addition.ex1" $ expect $ 1 + 1 == 2
-  , 'scope' "addition.ex2" $ expect $ 2 + 3 == 5
+  [ 'scope' "addition.ex1" $ 'expect' $ 1 + 1 == 2
+  , 'scope' "addition.ex2" $ 'expect' $ 2 + 3 == 5
   , 'scope' "list.reversal" $ 'propertyTest' $ do
       ns @<-@ 'forAll' $
         Gen.list (Range.singleton 10) (Gen.int Range.constantBounded)
       reverse (reverse ns) '===' ns
-  -- equivalent to `scope "addition.ex3"`
-  , 'scope' "addition" . 'scope' "ex3" $ expect $ 3 + 3 == 6
+  -- equivalent to `'scope' "addition.ex3"`
+  , 'scope' "addition" . 'scope' "ex3" $ 'expect' $ 3 + 3 == 6
   , 'scope' "always passes" $ 'ok' -- record a success result
   , 'scope' "failing test" $ 'crash' "oh noes!!"
   ]
 
--- NB: `run suite` would run all tests, but we only run
+-- NB: `'run' suite` would run all tests, but we only run
 -- tests whose scopes are prefixed by "addition"
 main :: IO ()
 main = 'runOnly' "addition" suite
@@ -139,7 +139,7 @@ We often want to generate random data for testing purposes:
 
 @
 reverseTest :: Test ()
-reverseTest = scope "list reversal" $ propertyTest $ do
+reverseTest = 'scope' "list reversal" $ 'propertyTest' $ do
   nums <- 'forAll' $ Gen.list (Range.linear 0 100) (Gen.int (Range.linear 0 99))
   reverse (reverse nums) '===' nums
 @
@@ -195,12 +195,17 @@ module EasyTest (
   , pending
   , crash
   -- * Hedgehog re-exports
+  -- | These common functions are included as a convenience for writing
+  -- 'propertyTest's. See "Hedgehog" for more.
+  , success
+  , failure
+  , assert
   , (===)
   , (/==)
   , Seed(..)
   , footnote
+  , annotate
   , forAll
-  , forAllWith
   ) where
 
 import EasyTest.Internal
