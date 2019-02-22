@@ -128,42 +128,46 @@ propertyTest = mkTest . property
 
 -- | Record a success if 'True', otherwise record a failure
 expect :: HasCallStack => Bool -> Test
-expect False = crash "unexpected"
+expect False = withFrozenCallStack $ crash "unexpected"
 expect True  = ok
 
 -- | Record a success if 'Just', otherwise record a failure
 expectJust :: HasCallStack => Maybe a -> Test
-expectJust Nothing  = crash "expected Just, got Nothing"
+expectJust Nothing  = withFrozenCallStack $ crash "expected Just, got Nothing"
 expectJust (Just _) = ok
 
 -- | Record a success if 'Right', otherwise record a failure
 expectRight :: (Show e, HasCallStack) => Either e a -> Test
-expectRight (Left e)  = crash $ "expected Right, got (Left " ++ show e ++ ")"
+expectRight (Left e)  = withFrozenCallStack $
+  crash $ "expected Right, got (Left " ++ show e ++ ")"
 expectRight (Right _) = ok
 
 -- | Record a success if 'Right', otherwise record a failure
 expectRightNoShow :: (HasCallStack) => Either e a -> Test
-expectRightNoShow (Left _)  = crash $ "expected Right, got Left"
+expectRightNoShow (Left _)  = withFrozenCallStack $
+  crash $ "expected Right, got Left"
 expectRightNoShow (Right _) = ok
 
 -- | Record a success if 'Left', otherwise record a failure
 expectLeft :: (Show a, HasCallStack) => Either e a -> Test
-expectLeft (Right a) = crash $ "expected Left, got (Right " ++ show a ++ ")"
+expectLeft (Right a) = withFrozenCallStack $
+  crash $ "expected Left, got (Right " ++ show a ++ ")"
 expectLeft (Left _)  = ok
 
 -- | Record a success if 'Left', otherwise record a failure
 expectLeftNoShow :: HasCallStack => Either e a -> Test
-expectLeftNoShow (Right _) = crash $ "expected Left, got Right"
+expectLeftNoShow (Right _) = withFrozenCallStack $
+  crash $ "expected Left, got Right"
 expectLeftNoShow (Left _)  = ok
 
 -- | Record a success if both arguments are equal, otherwise record a failure
 expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Test
-expectEq a b = unitTest $ a === b
+expectEq a b = withFrozenCallStack $ unitTest $ a === b
 
 -- | Record a success if the arguments are not equal, otherwise record a
 -- failure
 expectNeq :: (Eq a, Show a, HasCallStack) => a -> a -> Test
-expectNeq a b = unitTest $ a === b
+expectNeq a b = withFrozenCallStack $ unitTest $ a /== b
 
 -- | Run a list of tests
 tests :: [Test] -> Test
@@ -260,4 +264,5 @@ pending msg = unitTest $ do { footnote msg; discard }
 
 -- | Record a failure with a given message
 crash :: HasCallStack => String -> Test
-crash msg = Leaf $ unitProperty $ do { footnote msg; failure }
+crash msg = withFrozenCallStack $
+  Leaf $ unitProperty $ do { footnote msg; failure }
