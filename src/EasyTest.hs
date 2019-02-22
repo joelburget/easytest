@@ -15,15 +15,15 @@ import qualified Hedgehog.Gen   as Gen
 import qualified Hedgehog.Range as Range
 
 suite :: Test
-suite = tests
-  [ 'scope' "addition.ex1" $ 'unitTest' $ 1 + 1 '===' 2
-  , 'scope' "addition.ex2" $ 'unitTest' $ 2 + 3 '===' 5
+suite = 'tests'
+  [ 'scope' "addition.ex1" $ expect $ 1 + 1 == 2
+  , 'scope' "addition.ex2" $ expect $ 2 + 3 == 5
   , 'scope' "list.reversal" $ 'propertyTest' $ do
       ns @<-@ 'forAll' $
         Gen.list (Range.singleton 10) (Gen.int Range.constantBounded)
       reverse (reverse ns) '===' ns
   -- equivalent to `scope "addition.ex3"`
-  , 'scope' "addition" . 'scope' "ex3" $ 'unitTest' $ 3 + 3 '===' 6
+  , 'scope' "addition" . 'scope' "ex3" $ expect $ 3 + 3 == 6
   , 'scope' "always passes" $ 'ok' -- record a success result
   , 'scope' "failing test" $ 'crash' "oh noes!!"
   ]
@@ -94,21 +94,24 @@ This example is sequencing the 'ok', 'crash', and 'expect', so that they're all 
 >   ✓ (unnamed) passed 1 test.
 >   ✗ test-crash failed after 1 test.
 >
->         ┏━━ src/EasyTest/Internal.hs ━━━
->     262 ┃ crash :: HasCallStack => String -> Test
->     263 ┃ crash msg = Leaf $ unitProperty $ do { footnote msg; failure }
->         ┃ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>        ┏━━ tests/Suite.hs ━━━
+>      7 ┃ suite :: Test
+>      8 ┃ suite = tests
+>      9 ┃   [ ok
+>     10 ┃   , scope "test-crash" $ crash "oh noes!"
+>        ┃   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>     11 ┃   , expect $ 1 + 1 == 2
+>     12 ┃   ]
 >
 >     oh noes!
 >
 >     This failure can be reproduced by running:
->     > recheck (Size 0) (Seed 13981450739178025187 12313316183895066259) test-crash
+>     > recheck (Size 0) (Seed 5260262085575879281 15584855976373220115) test-crash
 >
 >   ✓ (unnamed) passed 1 test.
 >   ✗ 1 failed, 2 succeeded.
-> *** Exception: ExitFailure 1
 
-In the output, we get a stack trace pointing to the line where crash was called (@..tests/Suite.hs:10:24@), information about failing tests, and instructions for rerunning the tests with an identical random seed (in this case, there's no randomness, so @rerun@ would work fine, but if our test generated random data, we might want to rerun with the exact same random numbers).
+In the output, we get a stack trace pointing to the line where crash was called (@..tests/Suite.hs:10@), information about failing tests, and instructions for rerunning the tests with an identical random seed (in this case, there's no randomness, so @rerun@ would work fine, but if our test generated random data, we might want to rerun with the exact same random numbers). Note that, somewhat embarrassingly, the error message currently gives bad instructions and the correct way to rerun the tests is with @'rerun' (Seed 9567438751443806220 10328000621946411483) suite@.
 
 The various run functions ('run', 'runOnly', 'rerun', and 'rerunOnly') all exit the process with a nonzero status in the event of a failure, so they can be used for continuous integration or test running tools that key off the process exit code to determine whether the suite succeeded or failed. For instance, here's the relevant portion of a typical cabal file:
 
@@ -126,9 +129,9 @@ test-suite tests
 For tests that are logically separate, we usually combine them into a suite using 'tests', as in:
 
 @
-suite = tests
-  [ scope "ex1" $ expect $ 1 + 1 == 2
-  , scope "ex2" $ expect $ 2 + 2 == 4
+suite = 'tests'
+  [ 'scope' "ex1" $ 'expect' $ 1 + 1 == 2
+  , 'scope' "ex2" $ 'expect' $ 2 + 2 == 4
   ]
 @
 
@@ -168,7 +171,7 @@ module EasyTest (
   -- * Structuring tests
   , tests
   , scope
-  , unitTest
+  -- , unitTest
   , propertyTest
   -- * Running tests
   , run
@@ -194,7 +197,7 @@ module EasyTest (
   -- * Hedgehog re-exports
   , (===)
   , (/==)
-  , Seed
+  , Seed(..)
   , footnote
   , forAll
   , forAllWith

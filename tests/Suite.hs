@@ -25,7 +25,7 @@ reverseTest = scope "list reversal" $ propertyTest $ do
 
 main :: IO ()
 main = do
-  run $ expectEq @Int 1 1
+  run $ expect $ 1 == (1 :: Int)
   run suite1
   runOnly "a" suite1
   runOnly "b" suite1

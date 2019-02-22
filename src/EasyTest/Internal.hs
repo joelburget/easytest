@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- |
@@ -50,7 +50,6 @@ module EasyTest.Internal
   , Seed
   ) where
 
-
 import           Data.List         (intercalate)
 import           Data.String       (fromString)
 #if MIN_VERSION_base(4,9,0)
@@ -88,9 +87,14 @@ mkTest = Leaf
 -- scopes, so @scope "foo" . scope "bar"@ is equivalent to @scope "foo.bar"@
 scope :: String -> Test -> Test
 scope msg tree =
-  let newScopes = splitOn "." msg
+  let newScopes = splitSpecifier msg
   in foldr (\scope' test -> Internal [(scope', test)]) tree newScopes
 
+-- | Split a test specifier into parts
+splitSpecifier :: String -> [String]
+splitSpecifier str = case splitOn "." str of
+  [""] -> []
+  lst  -> lst
 
 -- | Run a unit test. Example:
 --
@@ -160,12 +164,31 @@ expectLeftNoShow (Right _) = withFrozenCallStack $
   crash $ "expected Left, got Right"
 expectLeftNoShow (Left _)  = ok
 
--- | Record a success if both arguments are equal, otherwise record a failure
+-- | Record a success if both arguments are equal, otherwise record a failure.
+--
+-- This is nicer than @'expect' $ _ '==' _@ for equality tests because it can
+-- provide a diff:
+--
+-- > ━━━ run ━━━
+-- > ✗ (unnamed) failed after 1 test.
+-- >
+-- >      ┏━━ tests/Suite.hs ━━━
+-- >   26 ┃ main :: IO ()
+-- >   27 ┃ main = run $ expectEq "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
+-- >      ┃ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-- >      ┃ │ Failed (- lhs =/= + rhs)
+-- >      ┃ │ - "foo\nbar\nbaz"
+-- >      ┃ │ + "foo\nquux\nbaz"
+-- >
+-- >   This failure can be reproduced by running:
+-- >   > recheck (Size 0) (Seed 3595725845167890780 3451893767486943501) (unnamed)
+-- >
+-- > ✗ 1 failed.
 expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Test
 expectEq a b = withFrozenCallStack $ unitTest $ a === b
 
 -- | Record a success if the arguments are not equal, otherwise record a
--- failure
+-- failure.
 expectNeq :: (Eq a, Show a, HasCallStack) => a -> a -> Test
 expectNeq a b = withFrozenCallStack $ unitTest $ a /== b
 
@@ -218,7 +241,7 @@ skipTree' stack = \case
 -- | Run all tests whose scope starts with the given prefix
 runOnly :: String -> Test -> IO ()
 runOnly prefix t = do
-  let props = runTreeOnly (splitOn "." prefix) t
+  let props = runTreeOnly (splitSpecifier prefix) t
       group = mkGroup (fromString $ "runOnly " ++ show prefix) props
 
   seed <- random
@@ -228,7 +251,7 @@ runOnly prefix t = do
 -- prefix
 rerunOnly :: String -> Seed -> Test -> IO ()
 rerunOnly prefix seed t = do
-  let props = runTreeOnly (splitOn "." prefix) t
+  let props = runTreeOnly (splitSpecifier prefix) t
       name = fromString $ "rerunOnly " ++ show prefix
   recheckSeed seed $ mkGroup name props
 
@@ -240,7 +263,8 @@ run t = do
 
 -- | Rerun all tests with the given seed
 rerun :: Seed -> Test -> IO ()
-rerun = rerunOnly ""
+rerun -- seed t = recheckSeed seed $ mkGroup "run" $ runTree t
+  = rerunOnly ""
 
 -- -- | Log a string
 -- note :: MonadTest m => String -> m ()
