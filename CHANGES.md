@@ -1,3 +1,8 @@
+## 0.3.0 (02/??/2019)
+
+* [Drop support for ghc 7.10]
+* Switch backend of the library to build on the hedgehog library
+
 ## 0.2.1 (10/24/2018)
 
 * [Fix build errors for GHC 8.6](https://github.com/joelburget/easytest/commit/9bb30ec16671c0ec74835a52290b6508143a368f), [prevent building on GHC before 7.10](https://github.com/joelburget/easytest/pull/15/commits/f6d0ac50fa5a351a30b576567306121d67c0973a)
