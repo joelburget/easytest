@@ -49,7 +49,7 @@ main = do
     -- Uncomment for an example diff:
     -- , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
     ]
-  runOnly "x" $ scope "typecheck-me" $ unitTest $ do
+  run $ scope "typecheck-me" $ skip $ unitTest $ do
     io $ putStrLn "we can do IO (though printing is a bad idea)"
     success
   pure ()

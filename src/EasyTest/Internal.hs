@@ -40,7 +40,6 @@ module EasyTest.Internal
   -- * Internal
   , Test(..)
   , unitProperty
-  , unitTest
   , mkTest
   -- * Other
   , io
@@ -77,6 +76,8 @@ data Test
   -- ^ A sequence of tests
   | Leaf !Property
   -- ^ A single property to check
+  | Skipped !Test
+  -- ^ A set of tests marked to skip
 
 -- | Make a "unit property" that has no random inputs. IE the special case of a
 -- property test that is a unit test.
@@ -219,16 +220,20 @@ runTree' stack = \case
   Leaf prop      -> [(reverse stack, prop)]
   Sequence trees -> concatMap (runTree' stack) trees
   Internal trees -> concatMap go trees
+  Skipped test   -> skipTree' stack test
   where go (name, tree) = runTree' (name:stack) tree
 
 -- | Flatten a subtree of tests. Use with 'mkGroup'
 runTreeOnly :: [String] -> Test -> [([String], Property)]
 runTreeOnly = runTreeOnly' [] where
 
+  -- Note: In this first case, we override a skip if this test is specifically
+  -- run
   runTreeOnly' stack []              tree             = runTree' stack tree
   runTreeOnly' stack (_:_)           tree@Leaf{}      = skipTree' stack tree
   runTreeOnly' stack scopes          (Sequence trees)
     = concatMap (runTreeOnly' stack scopes) trees
+  runTreeOnly' stack _               (Skipped tree)   = skipTree' stack tree
   runTreeOnly' stack (scope':scopes) (Internal trees)
     = concatMap go trees
     where go (name, tree) =
@@ -242,6 +247,7 @@ skipTree' stack = \case
   Leaf _prop     -> [(reverse stack, unitProperty discard)]
   Sequence trees -> concatMap (skipTree' stack) trees
   Internal trees -> concatMap go trees
+  Skipped test   -> skipTree' stack test
 
   where go (name, tree) = skipTree' (name:stack) tree
 
@@ -286,8 +292,8 @@ ok :: Test
 ok = unitTest success
 
 -- | Explicitly skip this test.
-skip :: Test
-skip = unitTest discard
+skip :: Test -> Test
+skip = Skipped
 
 -- | Mark a test as pending.
 pending :: String -> Test
