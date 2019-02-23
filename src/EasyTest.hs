@@ -171,7 +171,7 @@ module EasyTest (
   -- * Structuring tests
   , tests
   , scope
-  -- , unitTest
+  , unitTest
   , propertyTest
   -- * Running tests
   , run
@@ -194,6 +194,8 @@ module EasyTest (
   , skip
   , pending
   , crash
+  -- * Other
+  , io
   -- * Hedgehog re-exports
   -- | These common functions are included as a convenience for writing
   -- 'propertyTest's. See "Hedgehog" for more.

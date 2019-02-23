@@ -40,7 +40,10 @@ module EasyTest.Internal
   -- * Internal
   , Test(..)
   , unitProperty
+  , unitTest
   , mkTest
+  -- * Other
+  , io
   -- * Hedgehog re-exports
   , Property
   , PropertyT
@@ -50,16 +53,17 @@ module EasyTest.Internal
   , Seed
   ) where
 
-import           Data.List         (intercalate)
-import           Data.String       (fromString)
+import           Control.Monad.IO.Class (liftIO)
+import           Data.List              (intercalate)
+import           Data.String            (fromString)
 #if MIN_VERSION_base(4,9,0)
 import           GHC.Stack
 #else
 import           Data.CallStack
 #endif
-import           Data.List.Split (splitOn)
+import           Data.List.Split        (splitOn)
 
-import           Hedgehog          hiding (Test, test)
+import           Hedgehog               hiding (Test, test)
 import           Hedgehog.Internal.Seed (random)
 
 import           EasyTest.Hedgehog
@@ -117,6 +121,9 @@ splitSpecifier str = case splitOn "." str of
 -- >   ✗ 1 failed.
 unitTest :: HasCallStack => PropertyT IO () -> Test
 unitTest = mkTest . unitProperty
+
+io :: IO a -> PropertyT IO a
+io = liftIO
 
 -- | Run a property test. Example:
 --

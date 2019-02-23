@@ -4,7 +4,6 @@
 module Main where
 
 import           EasyTest
-import           EasyTest.Internal
 import           Hedgehog          (forAll, (===))
 import qualified Hedgehog.Gen      as Gen
 import qualified Hedgehog.Range    as Range
@@ -50,4 +49,7 @@ main = do
     -- Uncomment for an example diff:
     -- , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
     ]
+  runOnly "x" $ scope "typecheck-me" $ unitTest $ do
+    io $ putStrLn "we can do IO (though printing is a bad idea)"
+    success
   pure ()
