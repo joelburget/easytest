@@ -224,8 +224,6 @@ module EasyTest (
   , finally
   -- * Cabal test suite
   , cabalTestSuite
-  -- * Other
-  , io
   -- * Hedgehog re-exports
   -- | These common functions are included as a convenience for writing
   -- 'propertyTest's. See "Hedgehog" for more.

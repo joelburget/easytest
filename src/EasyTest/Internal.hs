@@ -47,8 +47,6 @@ module EasyTest.Internal
   , TestType(..)
   , Test(..)
   , BracketedTest(..)
-  -- * Other
-  , io
   -- * Hedgehog re-exports
   , Property
   , PropertyT
@@ -61,7 +59,6 @@ module EasyTest.Internal
 
 import qualified Control.Exception      as Ex
 import           Control.Monad.Except
-import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Writer
 import           Control.Monad.Trans.Maybe
 import           Data.Functor           ((<&>))
@@ -184,10 +181,6 @@ splitSpecifier str = case splitOn "." str of
 -- >   ✗ 1 failed.
 unitTest :: HasCallStack => PropertyT IO () -> Test
 unitTest = mkUnitTest
-
--- | Conventient alias for 'liftIO'.
-io :: IO a -> PropertyT IO a
-io = liftIO
 
 -- | Run a property test. Example:
 --
