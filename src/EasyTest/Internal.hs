@@ -276,8 +276,7 @@ run t = do
 
 -- | Rerun all tests with the given seed
 rerun :: Seed -> Test -> IO ()
-rerun -- seed t = recheckSeed seed $ mkGroup "run" $ runTree t
-  = rerunOnly ""
+rerun = rerunOnly ""
 
 -- -- | Log a string
 -- note :: MonadTest m => String -> m ()
