@@ -62,7 +62,6 @@ import qualified Control.Exception          as Ex
 import           Control.Monad.Except
 import           Control.Monad.Trans.Maybe
 import           Control.Monad.Writer
-import           Data.Functor               ((<&>))
 import           Data.List                  (intercalate)
 import           Data.List.Split            (splitOn)
 import           Data.String                (fromString)
@@ -383,3 +382,6 @@ cabalTestSuite :: IO Summary -> IO ()
 cabalTestSuite getSummary = do
   summary <- getSummary
   if summaryFailed summary > 0 then exitFailure else pure ()
+
+(<&>) :: Functor f => f a -> (a -> b) -> f b
+(<&>) = flip fmap
