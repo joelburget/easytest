@@ -117,7 +117,7 @@ This example is sequencing the 'ok', 'crash', and 'expect', so that they're all 
 
 In the output, we get a stack trace pointing to the line where crash was called (@..tests/Suite.hs:10@), information about failing tests, and instructions for rerunning the tests with an identical random seed (in this case, there's no randomness, so @rerun@ would work fine, but if our test generated random data, we might want to rerun with the exact same random numbers). Note that, somewhat embarrassingly, the error message currently gives bad instructions and the correct way to rerun the tests is with @'rerun' (Seed 9567438751443806220 10328000621946411483) suite@.
 
-The various run functions ('run', 'runOnly', 'rerun', and 'rerunOnly') all exit the process with a nonzero status in the event of a failure, so they can be used for continuous integration or test running tools that key off the process exit code to determine whether the suite succeeded or failed. For instance, here's the relevant portion of a typical cabal file:
+The various run functions ('run', 'runOnly', 'rerun', and 'rerunOnly') all return a hedgehog 'Summary'. Use 'cabalTestSuite' to exit the process with a nonzero status in the event of a failure, for use with @exitcode-stdio-1.0@ cabal @test-suite@s. Here's an example cabal file:
 
 @
 test-suite tests
@@ -222,6 +222,8 @@ module EasyTest (
   , bracket
   , bracket_
   , finally
+  -- * Cabal test suite
+  , cabalTestSuite
   -- * Other
   , io
   -- * Hedgehog re-exports
@@ -233,6 +235,7 @@ module EasyTest (
   , (===)
   , (/==)
   , Seed(..)
+  , Summary
   , footnote
   , annotate
   , forAll

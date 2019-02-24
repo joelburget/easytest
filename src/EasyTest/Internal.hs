@@ -41,6 +41,8 @@ module EasyTest.Internal
   , bracket
   , bracket_
   , finally
+  -- * Cabal test suite
+  , cabalTestSuite
   -- * Internal
   , TestType(..)
   , Test(..)
@@ -54,6 +56,7 @@ module EasyTest.Internal
   , (===)
   , (/==)
   , Seed
+  , Summary(..)
   ) where
 
 import qualified Control.Exception      as Ex
@@ -70,12 +73,14 @@ import           GHC.Stack
 #else
 import           Data.CallStack
 #endif
+import           System.Exit
 
 import           Hedgehog               hiding (Test, test)
 import           Hedgehog.Internal.Gen hiding (discard)
 import           Hedgehog.Internal.Property hiding (Test, propertyTest, test)
 import           Hedgehog.Internal.Seed (random)
 import qualified Hedgehog.Internal.Tree as HT
+import           Hedgehog.Internal.Report (Summary(..))
 
 import           EasyTest.Hedgehog
 
@@ -328,7 +333,7 @@ skipTree' stack = \case
 -- | Run all tests whose scope starts with the given prefix.
 --
 -- >>> runOnly "components.a" tests
-runOnly :: String -> Test -> IO ()
+runOnly :: String -> Test -> IO Summary
 runOnly prefix t = do
   let props = runTreeOnly (splitSpecifier prefix) t
       group = mkGroup (fromString $ "runOnly " ++ show prefix) props
@@ -340,14 +345,14 @@ runOnly prefix t = do
 -- prefix
 --
 -- >>> rerunOnly "components.a" (Seed 2914818620245020776 12314041441884757111) tests
-rerunOnly :: String -> Seed -> Test -> IO ()
+rerunOnly :: String -> Seed -> Test -> IO Summary
 rerunOnly prefix seed t = do
   let props = runTreeOnly (splitSpecifier prefix) t
       name = fromString $ "rerunOnly " ++ show prefix
   recheckSeed seed $ mkGroup name props
 
 -- | Run all tests
-run :: Test -> IO ()
+run :: Test -> IO Summary
 run t = do
   seed <- random
   recheckSeed seed $ mkGroup "run" $ runTree t
@@ -355,7 +360,7 @@ run t = do
 -- | Rerun all tests with the given seed
 --
 -- >>> rerun (Seed 2914818620245020776 12314041441884757111) tests
-rerun :: Seed -> Test -> IO ()
+rerun :: Seed -> Test -> IO Summary
 rerun = rerunOnly ""
 
 -- | Record a successful test
@@ -374,3 +379,13 @@ pending msg = unitTest $ do { footnote msg; discard }
 crash :: HasCallStack => String -> Test
 crash msg = withFrozenCallStack $ mkUnitTest
   (do { footnote msg; failure } :: PropertyT IO ())
+
+-- | Make this a cabal test suite for use with @exitcode-stdio-1.0@
+-- @test-suite@s.
+--
+-- This simply checks to see if any tests failed and if so exits with
+-- 'exitFailure'.
+cabalTestSuite :: IO Summary -> IO ()
+cabalTestSuite getSummary = do
+  summary <- getSummary
+  if summaryFailed summary > 0 then exitFailure else pure ()

@@ -63,3 +63,5 @@ main = do
     (\(_filepath, handle) -> do
       liftIO $ hPutStrLn handle "we can do IO"
       success)
+
+  pure ()
