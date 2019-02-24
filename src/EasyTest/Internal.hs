@@ -174,7 +174,7 @@ expectLeftNoShow (Left _)  = ok
 
 -- | Record a success if both arguments are equal, otherwise record a failure.
 --
--- This is nicer than @'expect' $ _ '==' _@ for equality tests because it can
+-- This is nicer than @'expect' $ _ == _@ for equality tests because it can
 -- provide a diff:
 --
 -- > ━━━ run ━━━
