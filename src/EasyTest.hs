@@ -17,7 +17,7 @@ import qualified Hedgehog.Range as Range
 suite :: 'Test'
 suite = 'tests'
   [ 'scope' "addition.ex1" $ 'expect' $ 1 + 1 == 2
-  , 'scope' "addition.ex2" $ 'expect' $ 2 + 3 == 5
+  , 'scope' "addition.ex2" $ 'expectEq' (2 + 3) 5
   , 'scope' "list.reversal" $ 'propertyTest' $ do
       ns @<-@ 'forAll' $
         Gen.list (Range.singleton 10) (Gen.int Range.constantBounded)
@@ -49,7 +49,11 @@ The idea here is to write tests with ordinary Haskell code, with control flow ex
 
 = User guide
 
-The simplest tests are 'ok', 'crash', and 'expect':
+EasyTest supports two types of tests -- property tests and unit tests. Property tests are written as hedgehog properties. Unit tests are written via assertions (eg 'expect').
+
+== Unit tests
+
+The simplest unit tests are 'ok', 'crash', and 'expect':
 
 @
 -- Record a success
@@ -135,7 +139,9 @@ suite = 'tests'
   ]
 @
 
-We often want to generate random data for testing purposes:
+== Property tests
+
+We can also create property tests (via hedgehog). As an example, we can express the property that reversing a list twice results in the original list:
 
 @
 reverseTest :: Test ()
@@ -163,25 +169,43 @@ reverseTest = 'propertyTest' $ do
   r '===' nums
 @
 
+See the hedgehog docs for more on writing good property tests.
+
+== Bracketed tests
+
+EasyTest also supports ("bracketed") tests requiring setup and teardown.
+
+For example, we could open a temporary file:
+
+@
+'scope' "bracket-example" $ 'mkUnitTest' $ 'bracket'
+  (mkstemp "temp")
+  (\(filepath, handle) -> hClose handle >> removeFile filepath)
+  (\(_filepath, handle) -> do
+    liftIO $ hPutStrLn handle "we can do IO"
+    'success')
+@
+
+'bracket' ensures that the resource is cleaned up, even if the test throws an
+exception. You can write either property- or unit- tests in this style, with
+'mkPropertyTest' and 'mkUnitTest'.
+
 -}
 
 module EasyTest (
-  -- * Tests
-    Test
   -- * Structuring tests
+    Test
   , tests
   , scope
   , unitTest
   , propertyTest
+  , Testable(..)
   -- * Running tests
   , run
   , runOnly
   , rerun
   , rerunOnly
-  -- -- * Notes
-  -- , note
-  -- , noteShow
-  -- * Assertions
+  -- * Assertions for unit tests
   , expect
   , expectJust
   , expectRight
@@ -194,6 +218,10 @@ module EasyTest (
   , skip
   , pending
   , crash
+  -- * Bracketed tests (requiring setup / teardown)
+  , bracket
+  , bracket_
+  , finally
   -- * Other
   , io
   -- * Hedgehog re-exports

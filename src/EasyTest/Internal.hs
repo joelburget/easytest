@@ -1,4 +1,6 @@
 {-# LANGUAGE CPP               #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- |
@@ -16,15 +18,13 @@ module EasyTest.Internal
   , scope
   , unitTest
   , propertyTest
+  , Testable(..)
   -- * Running tests
   , run
   , runOnly
   , rerun
   , rerunOnly
-  -- -- * Notes
-  -- , note
-  -- , noteShow
-  -- * Assertions
+  -- * Assertions for unit tests
   , expect
   , expectJust
   , expectRight
@@ -37,10 +37,14 @@ module EasyTest.Internal
   , skip
   , pending
   , crash
+  -- * Bracketed tests (requiring setup / teardown)
+  , bracket
+  , bracket_
+  , finally
   -- * Internal
+  , TestType(..)
   , Test(..)
-  , unitProperty
-  , mkTest
+  , BracketedTest(..)
   -- * Other
   , io
   -- * Hedgehog re-exports
@@ -52,48 +56,101 @@ module EasyTest.Internal
   , Seed
   ) where
 
+import qualified Control.Exception      as Ex
+import           Control.Monad.Except
 import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Writer
+import           Control.Monad.Trans.Maybe
+import           Data.Functor           ((<&>))
 import           Data.List              (intercalate)
+import           Data.List.Split        (splitOn)
 import           Data.String            (fromString)
 #if MIN_VERSION_base(4,9,0)
 import           GHC.Stack
 #else
 import           Data.CallStack
 #endif
-import           Data.List.Split        (splitOn)
 
 import           Hedgehog               hiding (Test, test)
+import           Hedgehog.Internal.Gen hiding (discard)
+import           Hedgehog.Internal.Property hiding (Test, propertyTest, test)
 import           Hedgehog.Internal.Seed (random)
+import qualified Hedgehog.Internal.Tree as HT
 
 import           EasyTest.Hedgehog
 
+-- | Properties that can be lifted into unit or property tests.
+class Testable t where
+  -- | This generalizes 'unitTest' to also handle 'bracket'ed tests. The type
+  -- specializes to:
+  --
+  -- > mkUnitTest :: PropertyT IO () -> Test
+  -- > mkUnitTest :: BracketedTest -> Test
+  mkUnitTest     :: t -> Test
+  -- | This generalizes 'propertyTest' to also handle 'bracket'ed tests. The
+  -- type specializes to:
+  --
+  -- > mkPropertyTest :: PropertyT IO () -> Test
+  -- > mkPropertyTest :: BracketedTest -> Test
+  mkPropertyTest :: t -> Test
+
+instance Testable BracketedTest where
+  mkUnitTest     = Bracketed Unit . id
+  mkPropertyTest = Bracketed Prop . id
+
+instance Testable (PropertyT IO ()) where
+  mkUnitTest     = Bracketed Unit . mkSimplyBracketedTest
+  mkPropertyTest = Bracketed Prop . mkSimplyBracketedTest
+
+-- | Unit- or property- test.
+data TestType = Unit | Prop
 
 -- | A set of unit- and property-tests
 data Test
-  = Internal ![(String, Test)]
+  = NamedTests ![(String, Test)]
   -- ^ A set of named (scoped) tests
   | Sequence ![Test]
   -- ^ A sequence of tests
-  | Leaf !Property
-  -- ^ A single property to check
+  | Bracketed !TestType !BracketedTest
+  -- ^ A test with setup and teardown
   | Skipped !Test
   -- ^ A set of tests marked to skip
 
--- | Make a "unit property" that has no random inputs. IE the special case of a
--- property test that is a unit test.
-unitProperty :: HasCallStack => PropertyT IO () -> Property
-unitProperty = withTests 1 . withDiscards 1 . property
+-- | A test with setup and teardown steps.
+data BracketedTest where
+  BracketedTest
+    :: IO a
+    -> (a -> IO ())
+    -> (a -> PropertyT IO ())
+    -> BracketedTest
 
--- | Make a test from a single property.
-mkTest :: HasCallStack => Property -> Test
-mkTest = Leaf
+-- | Make a test with setup and teardown steps.
+bracket :: IO a -> (a -> IO ()) -> (a -> PropertyT IO ()) -> BracketedTest
+bracket setup teardown test = BracketedTest setup teardown test
+
+-- | A variant of 'bracket' where the return value from the setup step is not
+-- required.
+bracket_ :: IO a -> IO b -> PropertyT IO () -> BracketedTest
+bracket_ before after thing
+  = bracket before (\_ -> do { _ <- after; pure () }) (const thing)
+
+-- | A specialised variant of 'bracket' with just a teardown step.
+finally :: PropertyT IO () -> IO a -> BracketedTest
+finally test after = bracket_ (pure ()) after test
+
+-- | A degenerate bracketed test with no meaningful setup or teardown.
+mkSimplyBracketedTest :: HasCallStack => PropertyT IO () -> BracketedTest
+mkSimplyBracketedTest p = BracketedTest
+  (pure ())
+  (\() -> pure ())
+  (\() -> p)
 
 -- | Label a test. Can be nested. A "." is placed between nested
 -- scopes, so @scope "foo" . scope "bar"@ is equivalent to @scope "foo.bar"@
 scope :: String -> Test -> Test
 scope msg tree =
   let newScopes = splitSpecifier msg
-  in foldr (\scope' test -> Internal [(scope', test)]) tree newScopes
+  in foldr (\scope' test -> NamedTests [(scope', test)]) tree newScopes
 
 -- | Split a test specifier into parts
 splitSpecifier :: String -> [String]
@@ -121,8 +178,9 @@ splitSpecifier str = case splitOn "." str of
 -- >
 -- >   ✗ 1 failed.
 unitTest :: HasCallStack => PropertyT IO () -> Test
-unitTest = mkTest . unitProperty
+unitTest = mkUnitTest
 
+-- | Conventient alias for 'liftIO'.
 io :: IO a -> PropertyT IO a
 io = liftIO
 
@@ -136,7 +194,7 @@ io = liftIO
 -- >   ✓ (unnamed) passed 100 tests.
 -- >   ✓ 1 succeeded.
 propertyTest :: HasCallStack => PropertyT IO () -> Test
-propertyTest = mkTest . property
+propertyTest = mkPropertyTest
 
 -- | Record a success if 'True', otherwise record a failure
 expect :: HasCallStack => Bool -> Test
@@ -205,36 +263,52 @@ tests :: [Test] -> Test
 tests = Sequence
 
 -- | Make a 'Hedgehog.Group' from a list of tests.
-mkGroup :: GroupName -> [([String], Property)] -> Group
-mkGroup name props = Group name $ flip fmap props $ \(path, prop) ->
-  case path of
-    [] -> ("(unnamed)", prop)
-    _  -> (fromString (intercalate "." path), prop)
+mkGroup :: GroupName -> [([String], TestType, BracketedTest)] -> Group
+mkGroup name props = Group name $ props <&> \(path, ty, bracketed) ->
+  let name' = case path of
+        [] -> "(unnamed)"
+        _  -> fromString (intercalate "." path)
+      propConf = case ty of
+        Unit -> PropertyConfig 1 1 0 0
+        Prop -> defaultConfig
+  in (name', Property propConf (mkProperty bracketed))
+
+-- | Tear down a 'PropertyT', installing the cleanup handler, then build it
+-- back up.
+mkProperty :: BracketedTest -> PropertyT IO ()
+mkProperty (BracketedTest setup teardown test)
+  = PropertyT $ TestT $ ExceptT $ WriterT $ GenT $ \size seed ->
+      HT.Tree $ MaybeT $ do
+        a <- setup
+        case test a of
+          PropertyT (TestT (ExceptT (WriterT (GenT innerTest)))) -> Ex.finally
+            (runMaybeT $ HT.runTree $ innerTest size seed)
+            (teardown a)
 
 -- | Flatten a test tree. Use with 'mkGroup'
-runTree :: Test -> [([String], Property)]
+runTree :: Test -> [([String], TestType, BracketedTest)]
 runTree = runTree' []
 
-runTree' :: [String] -> Test -> [([String], Property)]
+runTree' :: [String] -> Test -> [([String], TestType, BracketedTest)]
 runTree' stack = \case
-  Leaf prop      -> [(reverse stack, prop)]
+  Bracketed ty prop -> [(reverse stack, ty, prop)]
   Sequence trees -> concatMap (runTree' stack) trees
-  Internal trees -> concatMap go trees
+  NamedTests trees -> concatMap go trees
   Skipped test   -> skipTree' stack test
   where go (name, tree) = runTree' (name:stack) tree
 
 -- | Flatten a subtree of tests. Use with 'mkGroup'
-runTreeOnly :: [String] -> Test -> [([String], Property)]
+runTreeOnly :: [String] -> Test -> [([String], TestType, BracketedTest)]
 runTreeOnly = runTreeOnly' [] where
 
   -- Note: In this first case, we override a skip if this test is specifically
   -- run
   runTreeOnly' stack []              tree             = runTree' stack tree
-  runTreeOnly' stack (_:_)           tree@Leaf{}      = skipTree' stack tree
+  runTreeOnly' stack (_:_)           tree@Bracketed{} = skipTree' stack tree
   runTreeOnly' stack scopes          (Sequence trees)
     = concatMap (runTreeOnly' stack scopes) trees
   runTreeOnly' stack _               (Skipped tree)   = skipTree' stack tree
-  runTreeOnly' stack (scope':scopes) (Internal trees)
+  runTreeOnly' stack (scope':scopes) (NamedTests trees)
     = concatMap go trees
     where go (name, tree) =
             if name == scope'
@@ -242,16 +316,18 @@ runTreeOnly = runTreeOnly' [] where
             else skipTree'    (name:stack)        tree
 
 -- | Skip this test tree (mark all properties as skipped).
-skipTree' :: [String] -> Test -> [([String], Property)]
+skipTree' :: [String] -> Test -> [([String], TestType, BracketedTest)]
 skipTree' stack = \case
-  Leaf _prop     -> [(reverse stack, unitProperty discard)]
-  Sequence trees -> concatMap (skipTree' stack) trees
-  Internal trees -> concatMap go trees
-  Skipped test   -> skipTree' stack test
+  Bracketed ty _test -> [(reverse stack, ty, mkSimplyBracketedTest discard)]
+  Sequence trees  -> concatMap (skipTree' stack) trees
+  NamedTests trees  -> concatMap go trees
+  Skipped test    -> skipTree' stack test
 
   where go (name, tree) = skipTree' (name:stack) tree
 
--- | Run all tests whose scope starts with the given prefix
+-- | Run all tests whose scope starts with the given prefix.
+--
+-- >>> runOnly "components.a" tests
 runOnly :: String -> Test -> IO ()
 runOnly prefix t = do
   let props = runTreeOnly (splitSpecifier prefix) t
@@ -262,6 +338,8 @@ runOnly prefix t = do
 
 -- | Rerun all tests with the given seed and whose scope starts with the given
 -- prefix
+--
+-- >>> rerunOnly "components.a" (Seed 2914818620245020776 12314041441884757111) tests
 rerunOnly :: String -> Seed -> Test -> IO ()
 rerunOnly prefix seed t = do
   let props = runTreeOnly (splitSpecifier prefix) t
@@ -275,16 +353,10 @@ run t = do
   recheckSeed seed $ mkGroup "run" $ runTree t
 
 -- | Rerun all tests with the given seed
+--
+-- >>> rerun (Seed 2914818620245020776 12314041441884757111) tests
 rerun :: Seed -> Test -> IO ()
 rerun = rerunOnly ""
-
--- -- | Log a string
--- note :: MonadTest m => String -> m ()
--- note = footnote
-
--- -- | Log a showable value
--- noteShow :: (MonadTest m, Show s) => s -> m ()
--- noteShow = footnoteShow
 
 -- | Record a successful test
 ok :: Test
@@ -300,5 +372,5 @@ pending msg = unitTest $ do { footnote msg; discard }
 
 -- | Record a failure with a given message
 crash :: HasCallStack => String -> Test
-crash msg = withFrozenCallStack $
-  Leaf $ unitProperty $ do { footnote msg; failure }
+crash msg = withFrozenCallStack $ mkUnitTest
+  (do { footnote msg; failure } :: PropertyT IO ())

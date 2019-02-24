@@ -74,7 +74,13 @@ library
     hedgehog                  >= 0.6,
     stm,
     -- for splitOn:
-    split                     >= 0.2.3
+    split                     >= 0.2.3,
+    -- we need mtl and transformers only for the breaking down / building up we
+    -- do of hedgehog properties. we leave their versions completely
+    -- unconstrained so we can rely just on the relevant hedgehog version
+    -- bounds.
+    mtl,
+    transformers
 
   if !impl(ghc >= 8.0)
     build-depends: semigroups == 0.18.*
@@ -86,4 +92,4 @@ test-suite tests
   type:           exitcode-stdio-1.0
   main-is:        Suite.hs
   hs-source-dirs: tests
-  build-depends:  base, easytest, hedgehog
+  build-depends:  base, easytest, hedgehog, unix, directory

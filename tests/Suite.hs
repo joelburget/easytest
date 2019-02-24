@@ -1,12 +1,19 @@
+{-# language BangPatterns        #-}
 {-# language OverloadedStrings   #-}
 {-# language TypeApplications    #-}
 {-# language ScopedTypeVariables #-}
 module Main where
 
+import           Control.Monad.IO.Class (liftIO)
 import           EasyTest
 import           Hedgehog          (forAll, (===))
 import qualified Hedgehog.Gen      as Gen
 import qualified Hedgehog.Range    as Range
+import           System.IO         (hClose, hPutStrLn)
+import System.Posix.Temp
+import System.Directory (removeFile)
+
+import EasyTest.Internal (TestType(..), Test(..))
 
 suite1 :: Test
 suite1 = tests
@@ -49,7 +56,10 @@ main = do
     -- Uncomment for an example diff:
     -- , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
     ]
-  run $ scope "typecheck-me" $ skip $ unitTest $ do
-    io $ putStrLn "we can do IO (though printing is a bad idea)"
-    success
-  pure ()
+
+  run $ scope "bracket" $ mkUnitTest $ bracket
+    (mkstemp "temp")
+    (\(filepath, handle) -> hClose handle >> removeFile filepath)
+    (\(_filepath, handle) -> do
+      liftIO $ hPutStrLn handle "we can do IO"
+      success)
