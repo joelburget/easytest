@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP               #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
@@ -57,14 +58,14 @@ module EasyTest.Internal
   , Summary(..)
   ) where
 
-import qualified Control.Exception      as Ex
+import qualified Control.Exception          as Ex
 import           Control.Monad.Except
-import           Control.Monad.Writer
 import           Control.Monad.Trans.Maybe
-import           Data.Functor           ((<&>))
-import           Data.List              (intercalate)
-import           Data.List.Split        (splitOn)
-import           Data.String            (fromString)
+import           Control.Monad.Writer
+import           Data.Functor               ((<&>))
+import           Data.List                  (intercalate)
+import           Data.List.Split            (splitOn)
+import           Data.String                (fromString)
 #if MIN_VERSION_base(4,9,0)
 import           GHC.Stack
 #else
@@ -72,12 +73,12 @@ import           Data.CallStack
 #endif
 import           System.Exit
 
-import           Hedgehog               hiding (Test, test)
-import           Hedgehog.Internal.Gen hiding (discard)
+import           Hedgehog                   hiding (Test, test)
+import           Hedgehog.Internal.Gen      hiding (discard)
 import           Hedgehog.Internal.Property hiding (Test, propertyTest, test)
-import           Hedgehog.Internal.Seed (random)
-import qualified Hedgehog.Internal.Tree as HT
-import           Hedgehog.Internal.Report (Summary(..))
+import           Hedgehog.Internal.Report   (Summary (..))
+import           Hedgehog.Internal.Seed     (random)
+import qualified Hedgehog.Internal.Tree     as HT
 
 import           EasyTest.Hedgehog
 

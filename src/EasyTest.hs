@@ -239,5 +239,5 @@ module EasyTest (
   , forAll
   ) where
 
-import EasyTest.Internal
-import Hedgehog          hiding (Test)
+import           EasyTest.Internal
+import           Hedgehog          hiding (Test)

@@ -12,8 +12,8 @@ module EasyTest.Hedgehog (recheckSeed) where
 
 import           Control.Monad.IO.Class
 
-import           Control.Concurrent.STM.TVar
-  (TVar, modifyTVar', newTVar, readTVar)
+import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVar,
+                                              readTVar)
 import           Control.Monad.STM           (atomically)
 #if !(MIN_VERSION_base(4,11,0))
 import           Data.Semigroup

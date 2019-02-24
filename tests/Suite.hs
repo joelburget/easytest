@@ -1,19 +1,18 @@
-{-# language BangPatterns        #-}
-{-# language OverloadedStrings   #-}
-{-# language TypeApplications    #-}
-{-# language ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 module Main where
 
 import           Control.Monad.IO.Class (liftIO)
-import           EasyTest
-import           Hedgehog          (forAll, (===))
-import qualified Hedgehog.Gen      as Gen
-import qualified Hedgehog.Range    as Range
-import           System.IO         (hClose, hPutStrLn)
-import System.Posix.Temp
-import System.Directory (removeFile)
+import           Hedgehog               (forAll, (===))
+import qualified Hedgehog.Gen           as Gen
+import qualified Hedgehog.Range         as Range
+import           System.Directory       (removeFile)
+import           System.IO              (hClose, hPutStrLn)
+import           System.Posix.Temp
 
-import EasyTest.Internal (TestType(..), Test(..))
+import           EasyTest
+import           EasyTest.Internal      (Test (..), TestType (..))
 
 suite1 :: Test
 suite1 = tests
