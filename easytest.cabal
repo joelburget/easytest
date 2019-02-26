@@ -71,7 +71,9 @@ library
   build-depends:
     base                      >= 4.5      && <= 5,
     call-stack                >= 0.1,
-    hedgehog                  >= 0.6,
+    -- since we rely on a hedgehog internal module we need to maintain tight
+    -- bounds (and test with all possible versions, ideally)
+    hedgehog                  >= 0.6      && <= 0.6.1,
     stm,
     -- for splitOn:
     split                     >= 0.2.3,

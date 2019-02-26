@@ -237,6 +237,7 @@ module EasyTest (
   , footnote
   , annotate
   , forAll
+  , PropertyT
   ) where
 
 import           EasyTest.Internal
