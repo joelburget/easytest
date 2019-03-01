@@ -18,8 +18,8 @@ module EasyTest.Internal
   -- * Structuring tests
     tests
   , scope
-  , unitTest
-  , propertyTest
+  , expect
+  , property
   , Testable(..)
   -- * Running tests
   , run
@@ -27,15 +27,9 @@ module EasyTest.Internal
   , rerun
   , rerunOnly
   -- * Assertions for unit tests
-  , expect
-  , expectJust
-  , expectRight
-  , expectRightNoShow
-  , expectLeft
-  , expectLeftNoShow
-  , expectEq
-  , expectNeq
-  , expectMatch
+  , match
+  , Prism
+  , Prism'
   , ok
   , skip
   , pending
@@ -78,9 +72,9 @@ import           Data.CallStack
 #endif
 import           System.Exit
 
-import           Hedgehog                   hiding (Test, test)
+import           Hedgehog                   hiding (Test, test, property)
 import           Hedgehog.Internal.Gen      hiding (discard)
-import           Hedgehog.Internal.Property hiding (Test, propertyTest, test)
+import           Hedgehog.Internal.Property hiding (Test, property, test)
 import           Hedgehog.Internal.Report   (Summary (..))
 import           Hedgehog.Internal.Seed     (random)
 import qualified Hedgehog.Internal.Tree     as HT
@@ -172,14 +166,14 @@ splitSpecifier str = case splitOn "." str of
 
 -- | Run a unit test. Example:
 --
--- >>> run $ unitTest $ 1 === 2
+-- >>> run $ expect $ 1 === 2
 -- > ━━━ run ━━━
 -- >   ✗ (unnamed) failed after 1 test.
 -- >
 -- >        ┏━━ tests/Suite.hs ━━━
 -- >     26 ┃ main :: IO ()
 -- >     27 ┃ main = do
--- >     28 ┃   run $ unitTest $ 1 === (2 :: Int)
+-- >     28 ┃   run $ expect $ 1 === (2 :: Int)
 -- >        ┃   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 -- >        ┃   │ Failed (- lhs =/= + rhs)
 -- >        ┃   │ - 1
@@ -189,82 +183,20 @@ splitSpecifier str = case splitOn "." str of
 -- >     > recheck (Size 0) (Seed 2914818620245020776 12314041441884757111) (unnamed)
 -- >
 -- >   ✗ 1 failed.
-unitTest :: HasCallStack => PropertyT IO () -> Test
-unitTest = mkUnitTest
+expect :: HasCallStack => PropertyT IO () -> Test
+expect = mkUnitTest
 
 -- | Run a property test. Example:
 --
--- >>> run $ propertyTest $ do
+-- >>> run $ property $ do
 -- >>>   list <- forAll $ Gen.list @_ @Int (Range.linear 0 100)
 -- >>>     (Gen.element [0..100])
 -- >>>   reverse (reverse list) === list
 -- > ━━━ run ━━━
 -- >   ✓ (unnamed) passed 100 tests.
 -- >   ✓ 1 succeeded.
-propertyTest :: HasCallStack => PropertyT IO () -> Test
-propertyTest = mkPropertyTest
-
--- | Record a success if 'True', otherwise record a failure
-expect :: HasCallStack => Bool -> Test
-expect False = withFrozenCallStack $ crash "unexpected"
-expect True  = ok
-
--- | Record a success if 'Just', otherwise record a failure
-expectJust :: HasCallStack => Maybe a -> Test
-expectJust Nothing  = withFrozenCallStack $ crash "expected Just, got Nothing"
-expectJust (Just _) = ok
-
--- | Record a success if 'Right', otherwise record a failure
-expectRight :: (Show e, HasCallStack) => Either e a -> Test
-expectRight (Left e)  = withFrozenCallStack $
-  crash $ "expected Right, got (Left " ++ show e ++ ")"
-expectRight (Right _) = ok
-
--- | Record a success if 'Right', otherwise record a failure
-expectRightNoShow :: (HasCallStack) => Either e a -> Test
-expectRightNoShow (Left _)  = withFrozenCallStack $
-  crash $ "expected Right, got Left"
-expectRightNoShow (Right _) = ok
-
--- | Record a success if 'Left', otherwise record a failure
-expectLeft :: (Show a, HasCallStack) => Either e a -> Test
-expectLeft (Right a) = withFrozenCallStack $
-  crash $ "expected Left, got (Right " ++ show a ++ ")"
-expectLeft (Left _)  = ok
-
--- | Record a success if 'Left', otherwise record a failure
-expectLeftNoShow :: HasCallStack => Either e a -> Test
-expectLeftNoShow (Right _) = withFrozenCallStack $
-  crash $ "expected Left, got Right"
-expectLeftNoShow (Left _)  = ok
-
--- | Record a success if both arguments are equal, otherwise record a failure.
---
--- This is nicer than @'expect' $ _ == _@ for equality tests because it can
--- provide a diff:
---
--- > ━━━ run ━━━
--- > ✗ (unnamed) failed after 1 test.
--- >
--- >      ┏━━ tests/Suite.hs ━━━
--- >   26 ┃ main :: IO ()
--- >   27 ┃ main = run $ expectEq "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
--- >      ┃ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
--- >      ┃ │ Failed (- lhs =/= + rhs)
--- >      ┃ │ - "foo\nbar\nbaz"
--- >      ┃ │ + "foo\nquux\nbaz"
--- >
--- >   This failure can be reproduced by running:
--- >   > recheck (Size 0) (Seed 3595725845167890780 3451893767486943501) (unnamed)
--- >
--- > ✗ 1 failed.
-expectEq :: (Eq a, Show a, HasCallStack) => a -> a -> Test
-expectEq a b = withFrozenCallStack $ unitTest $ a === b
-
--- | Record a success if the arguments are not equal, otherwise record a
--- failure.
-expectNeq :: (Eq a, Show a, HasCallStack) => a -> a -> Test
-expectNeq a b = withFrozenCallStack $ unitTest $ a /== b
+property :: HasCallStack => PropertyT IO () -> Test
+property = mkPropertyTest
 
 foldMapOf :: Getting r s a -> (a -> r) -> s -> r
 foldMapOf l f = getConst #. l (Const #. f)
@@ -274,10 +206,12 @@ preview :: Getting (First a) s a -> s -> Maybe a
 preview l = getFirst #. foldMapOf l (First #. Just)
 {-# INLINE preview #-}
 
-expectMatch :: HasCallStack => Prism' s a -> s -> Test
-expectMatch p s = case preview p s of
-  Just _  -> ok
-  Nothing -> crash "Prism failed to match"
+match :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
+match p s = withFrozenCallStack $ case preview p s of
+  Just _  -> success
+  Nothing -> do
+    footnote "Prism failed to match"
+    failure
 
 -- | Run a list of tests
 tests :: [Test] -> Test
@@ -381,7 +315,7 @@ rerun = rerunOnly ""
 
 -- | Record a successful test
 ok :: Test
-ok = unitTest success
+ok = expect success
 
 -- | Explicitly skip this test.
 skip :: Test -> Test
@@ -389,7 +323,7 @@ skip = Skipped
 
 -- | Mark a test as pending.
 pending :: String -> Test
-pending msg = unitTest $ do { footnote msg; discard }
+pending msg = expect $ do { footnote msg; discard }
 
 -- | Record a failure with a given message
 crash :: HasCallStack => String -> Test

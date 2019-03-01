@@ -197,8 +197,8 @@ module EasyTest (
     Test
   , tests
   , scope
-  , unitTest
-  , propertyTest
+  , expect
+  , property
   , Testable(..)
   -- * Running tests
   , run
@@ -206,18 +206,11 @@ module EasyTest (
   , rerun
   , rerunOnly
   -- * Assertions for unit tests
-  , expect
-  , expectJust
-  , expectRight
-  , expectRightNoShow
-  , expectLeft
-  , expectLeftNoShow
-  , expectEq
-  , expectNeq
   , ok
   , skip
   , pending
   , crash
+  , match
   -- * Bracketed tests (requiring setup / teardown)
   , bracket
   , bracket_
@@ -241,4 +234,4 @@ module EasyTest (
   ) where
 
 import           EasyTest.Internal
-import           Hedgehog          hiding (Test)
+import           Hedgehog          hiding (Test, property)
