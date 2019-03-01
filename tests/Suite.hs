@@ -5,7 +5,6 @@
 module Main where
 
 import           Control.Monad.IO.Class (liftIO)
-import           Data.Profunctor        (dimap, right')
 import           Hedgehog               (forAll, (===))
 import qualified Hedgehog.Gen           as Gen
 import qualified Hedgehog.Range         as Range
@@ -14,22 +13,7 @@ import           System.IO              (hClose, hPutStrLn)
 import           System.Posix.Temp
 
 import           EasyTest
-import           EasyTest.Internal      (Test (..), Prism)
-
--- Normally you'd import 'prism', '_Left', and '_Right' from lens. We define
--- them here because they're simple and we can avoid the dependency.
-
-prism :: (b -> t) -> (s -> Either t a) -> Prism s t a b
-prism bt seta = dimap seta (either pure (fmap bt)) . right'
-{-# INLINE prism #-}
-
-_Left :: Prism (Either a c) (Either b c) a b
-_Left = prism Left $ either Right (Left . Right)
-{-# INLINE _Left #-}
-
-_Right :: Prism (Either c a) (Either c b) a b
-_Right = prism Right $ either (Left . Left) Right
-{-# INLINE _Right #-}
+import           EasyTest.Prism
 
 suite1 :: Test
 suite1 = tests
@@ -64,8 +48,10 @@ main = do
   _ <- run reverseTest
 
   _ <- run $ tests
-    [ expect $ match _Left  (Left 1   :: Either Int ())
-    , expect $ match _Right (Right () :: Either Int ())
+    [ expect $ matching    _Left  (Left 1   :: Either Int ())
+    , expect $ notMatching _Right (Left 1   :: Either Int ())
+    , expect $ matching    _Right (Right () :: Either Int ())
+    , expect $ notMatching _Left  (Right () :: Either Int ())
 
     -- Uncomment for an example diff:
     -- , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)

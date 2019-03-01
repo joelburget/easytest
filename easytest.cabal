@@ -67,6 +67,7 @@ library
     EasyTest
     EasyTest.Hedgehog
     EasyTest.Internal
+    EasyTest.Prism
 
   build-depends:
     base                      >= 4.5      && <= 5,

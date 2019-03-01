@@ -198,7 +198,8 @@ module EasyTest (
   , expect
   , property
   -- * Assertions for unit tests
-  , match
+  , matching
+  , notMatching
   , skip
   , pending
   , crash

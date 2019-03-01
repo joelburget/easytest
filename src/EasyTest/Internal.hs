@@ -21,7 +21,8 @@ module EasyTest.Internal
   , expect
   , property
   -- * Assertions for unit tests
-  , match
+  , matching
+  , notMatching
   , skip
   , pending
   , crash
@@ -187,8 +188,8 @@ preview l = getFirst #. foldMapOf l (First #. Just)
 -- >     48 ┃ main :: IO ()
 -- >     49 ┃ main = do
 -- >     50 ┃   _ <- run $ tests
--- >     51 ┃     [ expect $ match _Left (Left 1   :: Either Int ())
--- >     52 ┃     , expect $ match _Left (Right () :: Either Int ())
+-- >     51 ┃     [ expect $ matching _Left (Left 1   :: Either Int ())
+-- >     52 ┃     , expect $ matching _Left (Right () :: Either Int ())
 -- >        ┃     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 -- >     53 ┃     ]
 -- >     54 ┃   pure ()
@@ -199,12 +200,15 @@ preview l = getFirst #. foldMapOf l (First #. Just)
 -- >     > recheck (Size 0) (Seed 14003809197113786240 2614482618840800713) (unnamed)
 -- >
 -- >   ✗ 1 failed, 1 succeeded.
-match :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
-match p s = withFrozenCallStack $ case preview p s of
+matching :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
+matching p s = withFrozenCallStack $ case preview p s of
   Just _  -> success
-  Nothing -> do
-    footnote "Prism failed to match"
-    failure
+  Nothing -> do { footnote "Prism failed to match"; failure }
+
+notMatching :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
+notMatching p s = withFrozenCallStack $ case preview p s of
+  Nothing -> success
+  Just _  -> do { footnote "Prism matched"; failure }
 
 -- | Make a 'Hedgehog.Group' from a list of tests.
 mkGroup :: GroupName -> [([String], TestType, PropertyT IO ())] -> Group
