@@ -16,15 +16,14 @@ import qualified Hedgehog.Range as Range
 
 suite :: 'Test'
 suite = 'tests'
-  [ 'scope' "addition.ex1" $ 'expect' $ 1 + 1 == 2
-  , 'scope' "addition.ex2" $ 'expectEq' (2 + 3) 5
-  , 'scope' "list.reversal" $ 'propertyTest' $ do
+  [ 'scope' "addition.ex" $ 'expect' $ 1 + 1 == 2
+  , 'scope' "list.reversal" $ 'property' $ do
       ns @<-@ 'forAll' $
         Gen.list (Range.singleton 10) (Gen.int Range.constantBounded)
       reverse (reverse ns) '===' ns
   -- equivalent to `'scope' "addition.ex3"`
-  , 'scope' "addition" . 'scope' "ex3" $ 'expect' $ 3 + 3 == 6
-  , 'scope' "always passes" $ 'ok' -- record a success result
+  , 'scope' "addition" . 'scope' "ex3" $ 'expect' $ 3 + 3 === 6
+  , 'scope' "always passes" 'ok' -- record a success result
   , 'scope' "failing test" $ 'crash' "oh noes!!"
   ]
 
@@ -63,7 +62,7 @@ The simplest unit tests are 'ok', 'crash', and 'expect':
 'crash' :: String -> 'Test'
 
 -- Record a success if True, otherwise record a failure
-'expect' :: Bool -> 'Test'
+'expect' :: PropertyT IO () -> 'Test'
 @
 
 We often want to label tests so we can see when they succeed or fail. For that we use 'scope':
@@ -145,7 +144,7 @@ We can also create property tests (via hedgehog). As an example, we can express 
 
 @
 reverseTest :: Test ()
-reverseTest = 'scope' "list reversal" $ 'propertyTest' $ do
+reverseTest = 'scope' "list reversal" $ 'property' $ do
   nums <- 'forAll' $ Gen.list (Range.linear 0 100) (Gen.int (Range.linear 0 99))
   reverse (reverse nums) '===' nums
 @
@@ -160,7 +159,7 @@ import qualified Hedgehog.Gen   as Gen
 import qualified Hedgehog.Range as Range
 
 reverseTest :: Test ()
-reverseTest = 'propertyTest' $ do
+reverseTest = 'property' $ do
   nums <- 'forAll' $
     Gen.list (Range.linear 0 100) (Gen.int (Range.linear 0 99))
   'footnote' $ "nums: " ++ show nums
@@ -178,7 +177,7 @@ EasyTest also supports ("bracketed") tests requiring setup and teardown.
 For example, we could open a temporary file:
 
 @
-'scope' "bracket-example" $ 'mkUnitTest' $ 'bracket'
+'scope' "bracket-example" $ 'expect' $ 'bracket'
   (mkstemp "temp")
   (\(filepath, handle) -> hClose handle >> removeFile filepath)
   (\(_filepath, handle) -> do
@@ -187,8 +186,7 @@ For example, we could open a temporary file:
 @
 
 'bracket' ensures that the resource is cleaned up, even if the test throws an
-exception. You can write either property- or unit- tests in this style, with
-'mkPropertyTest' and 'mkUnitTest'.
+exception. You can write either property- or unit- tests in this style.
 
 -}
 
