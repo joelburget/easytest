@@ -20,19 +20,16 @@ module EasyTest.Internal
   , scope
   , expect
   , property
+  -- * Assertions for unit tests
+  , match
+  , skip
+  , pending
+  , crash
   -- * Running tests
   , run
   , runOnly
   , rerun
   , rerunOnly
-  -- * Assertions for unit tests
-  , match
-  , Prism
-  , Prism'
-  , ok
-  , skip
-  , pending
-  , crash
   -- * Bracketed tests (requiring setup / teardown)
   , bracket
   , bracket_
@@ -40,6 +37,8 @@ module EasyTest.Internal
   -- * Cabal test suite
   , cabalTestSuite
   -- * Internal
+  , Prism
+  , Prism'
   , TestType(..)
   , Test(..)
   -- * Hedgehog re-exports
@@ -97,26 +96,9 @@ data Test
   | Skipped !Test
   -- ^ A set of tests marked to skip
 
--- | Make a test with setup and teardown steps.
-bracket :: IO a -> (a -> IO ()) -> (a -> PropertyT IO ()) -> PropertyT IO ()
-bracket setup teardown test
-  = PropertyT $ TestT $ ExceptT $ WriterT $ GenT $ \size seed ->
-      HT.Tree $ MaybeT $ do
-        a <- setup
-        case test a of
-          PropertyT (TestT (ExceptT (WriterT (GenT innerTest)))) -> Ex.finally
-            (runMaybeT $ HT.runTree $ innerTest size seed)
-            (teardown a)
-
--- | A variant of 'bracket' where the return value from the setup step is not
--- required.
-bracket_ :: IO a -> IO b -> PropertyT IO () -> PropertyT IO ()
-bracket_ before after thing
-  = bracket before (\_ -> do { _ <- after; pure () }) (const thing)
-
--- | A specialised variant of 'bracket' with just a teardown step.
-finally :: PropertyT IO () -> IO a -> PropertyT IO ()
-finally test after = bracket_ (pure ()) after test
+-- | Run a list of tests
+tests :: [Test] -> Test
+tests = Sequence
 
 -- | Label a test. Can be nested. A "." is placed between nested
 -- scopes, so @scope "foo" . scope "bar"@ is equivalent to @scope "foo.bar"@
@@ -124,12 +106,6 @@ scope :: String -> Test -> Test
 scope msg tree =
   let newScopes = splitSpecifier msg
   in foldr (\scope' test -> NamedTests [(scope', test)]) tree newScopes
-
--- | Split a test specifier into parts
-splitSpecifier :: String -> [String]
-splitSpecifier str = case splitOn "." str of
-  [""] -> []
-  lst  -> lst
 
 -- | Run a unit test. Example:
 --
@@ -164,6 +140,33 @@ expect = Leaf Unit
 -- >   ✓ 1 succeeded.
 property :: HasCallStack => PropertyT IO () -> Test
 property = Leaf Prop
+
+-- | Make a test with setup and teardown steps.
+bracket :: IO a -> (a -> IO ()) -> (a -> PropertyT IO ()) -> PropertyT IO ()
+bracket setup teardown test
+  = PropertyT $ TestT $ ExceptT $ WriterT $ GenT $ \size seed ->
+      HT.Tree $ MaybeT $ do
+        a <- setup
+        case test a of
+          PropertyT (TestT (ExceptT (WriterT (GenT innerTest)))) -> Ex.finally
+            (runMaybeT $ HT.runTree $ innerTest size seed)
+            (teardown a)
+
+-- | A variant of 'bracket' where the return value from the setup step is not
+-- required.
+bracket_ :: IO a -> IO b -> PropertyT IO () -> PropertyT IO ()
+bracket_ before after thing
+  = bracket before (\_ -> do { _ <- after; pure () }) (const thing)
+
+-- | A specialised variant of 'bracket' with just a teardown step.
+finally :: PropertyT IO () -> IO a -> PropertyT IO ()
+finally test after = bracket_ (pure ()) after test
+
+-- | Split a test specifier into parts
+splitSpecifier :: String -> [String]
+splitSpecifier str = case splitOn "." str of
+  [""] -> []
+  lst  -> lst
 
 foldMapOf :: Getting r s a -> (a -> r) -> s -> r
 foldMapOf l f = getConst #. l (Const #. f)
@@ -202,10 +205,6 @@ match p s = withFrozenCallStack $ case preview p s of
   Nothing -> do
     footnote "Prism failed to match"
     failure
-
--- | Run a list of tests
-tests :: [Test] -> Test
-tests = Sequence
 
 -- | Make a 'Hedgehog.Group' from a list of tests.
 mkGroup :: GroupName -> [([String], TestType, PropertyT IO ())] -> Group
@@ -291,22 +290,17 @@ run t = do
 rerun :: Seed -> Test -> IO Summary
 rerun = rerunOnly ""
 
--- | Record a successful test
-ok :: Test
-ok = expect success
-
 -- | Explicitly skip this test.
 skip :: Test -> Test
 skip = Skipped
 
 -- | Mark a test as pending.
-pending :: String -> Test
-pending msg = expect $ do { footnote msg; discard }
+pending :: String -> PropertyT IO ()
+pending msg = do { footnote msg; discard }
 
 -- | Record a failure with a given message
-crash :: HasCallStack => String -> Test
-crash msg = withFrozenCallStack $ expect
-  (do { footnote msg; failure } :: PropertyT IO ())
+crash :: HasCallStack => String -> PropertyT IO ()
+crash msg = withFrozenCallStack $ do { footnote msg; failure }
 
 -- | Make this a cabal test suite for use with @exitcode-stdio-1.0@
 -- @test-suite@s.

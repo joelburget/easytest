@@ -33,10 +33,10 @@ _Right = prism Right $ either (Left . Left) Right
 
 suite1 :: Test
 suite1 = tests
-  [ scope "a" ok
-  , scope "b.c" ok
-  , scope "b" ok
-  , scope "b" . scope "c" . scope "d" $ ok
+  [ scope "a" $ expect success
+  , scope "b.c" $ expect success
+  , scope "b" $ expect success
+  , scope "b" . scope "c" . scope "d" $ expect success
   ]
 
 reverseTest :: Test
@@ -51,15 +51,15 @@ main = do
   _ <- run suite1
   _ <- runOnly "a" suite1
   _ <- runOnly "b" suite1
-  _ <- runOnly "b" $ tests [suite1, scope "xyz" (crash "never run")]
-  _ <- runOnly "b.c" $ tests [suite1, scope "b" (crash "never run")]
+  _ <- runOnly "b" $ tests [suite1, scope "xyz" (expect (crash "never run"))]
+  _ <- runOnly "b.c" $ tests [suite1, scope "b" (expect (crash "never run"))]
   _ <- runOnly "x.go" $ tests
-    [ scope "x.go to" (crash "never run")
-    , scope "x.go" ok
+    [ scope "x.go to" $ expect $ crash "never run"
+    , scope "x.go" $ expect success
     ]
   _ <- runOnly "x.go to" $ tests
-    [ scope "x.go to" ok
-    , scope "x.go" (crash "never run")
+    [ scope "x.go to" $ expect success
+    , scope "x.go" $ expect $ crash "never run"
     ]
   _ <- run reverseTest
 
@@ -75,7 +75,7 @@ main = do
     (mkstemp "temp")
     (\(filepath, handle) -> hClose handle >> removeFile filepath)
     (\(_filepath, handle) -> do
-      liftIO $ hPutStrLn handle "we can do IO"
+      liftIO $ hPutStrLn handle "this temporary file will be cleaned up"
       success)
 
   pure ()

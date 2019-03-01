@@ -78,7 +78,7 @@ Here's an example usage, putting all these primitives together:
 @
 module Main where
 
-import EasyTest (Test, ok, scope, crash, expect, run, tests)
+import EasyTest (Test, scope, crash, expect, run, tests)
 
 suite :: 'Test'
 suite = 'tests'
@@ -100,7 +100,7 @@ This example is sequencing the 'ok', 'crash', and 'expect', so that they're all 
 >        ┏━━ tests/Suite.hs ━━━
 >      7 ┃ suite :: Test
 >      8 ┃ suite = tests
->      9 ┃   [ ok
+>      9 ┃   [ expect success
 >     10 ┃   , scope "test-crash" $ crash "oh noes!"
 >        ┃   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 >     11 ┃   , expect $ 1 + 1 == 2
@@ -197,17 +197,16 @@ module EasyTest (
   , scope
   , expect
   , property
+  -- * Assertions for unit tests
+  , match
+  , skip
+  , pending
+  , crash
   -- * Running tests
   , run
   , runOnly
   , rerun
   , rerunOnly
-  -- * Assertions for unit tests
-  , ok
-  , skip
-  , pending
-  , crash
-  , match
   -- * Bracketed tests (requiring setup / teardown)
   , bracket
   , bracket_
