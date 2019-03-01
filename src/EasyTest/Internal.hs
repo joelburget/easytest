@@ -35,7 +35,7 @@ module EasyTest.Internal
   , expectLeftNoShow
   , expectEq
   , expectNeq
-  , expectPrism
+  , expectMatch
   , ok
   , skip
   , pending
@@ -60,12 +60,16 @@ module EasyTest.Internal
   , Summary(..)
   ) where
 
+import           Control.Applicative        (Const(..))
 import qualified Control.Exception          as Ex
 import           Control.Monad.Except
 import           Control.Monad.Trans.Maybe
 import           Control.Monad.Writer
 import           Data.List                  (intercalate)
 import           Data.List.Split            (splitOn)
+import           Data.Monoid (First(..))
+import           Data.Profunctor.Choice
+import           Data.Profunctor.Unsafe
 import           Data.String                (fromString)
 #if MIN_VERSION_base(4,9,0)
 import           GHC.Stack
@@ -83,10 +87,9 @@ import qualified Hedgehog.Internal.Tree     as HT
 
 import           EasyTest.Hedgehog
 
-import Data.Profunctor.Choice
-import Data.Profunctor.Unsafe
-import Data.Monoid (First(..))
-import Control.Applicative (Const(..))
+type Prism     s t a b = forall p f. (Choice p, Applicative f) => p a (f b) -> p s (f t)
+type Prism'    s   a   = Prism s s a a
+type Getting r s   a   = (a -> Const r a) -> s -> Const r s
 
 -- | Properties that can be lifted into unit or property tests.
 class Testable t where
@@ -271,10 +274,10 @@ preview :: Getting (First a) s a -> s -> Maybe a
 preview l = getFirst #. foldMapOf l (First #. Just)
 {-# INLINE preview #-}
 
-expectPrism :: HasCallStack => Prism' s a -> s -> Test
-expectPrism p s = case preview p s of
-  Just _ -> ok
-  Nothing -> crash ""
+expectMatch :: HasCallStack => Prism' s a -> s -> Test
+expectMatch p s = case preview p s of
+  Just _  -> ok
+  Nothing -> crash "Prism failed to match"
 
 -- | Run a list of tests
 tests :: [Test] -> Test
