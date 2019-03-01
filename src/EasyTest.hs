@@ -195,11 +195,12 @@ module EasyTest (
     Test
   , tests
   , scope
-  , expect
+  , example
+  , unitTest
   , property
   -- * Assertions for unit tests
-  , matching
-  , notMatching
+  , matches
+  , doesn'tMatch
   , skip
   , pending
   , crash

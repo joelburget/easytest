@@ -17,10 +17,10 @@ import           EasyTest.Prism
 
 suite1 :: Test
 suite1 = tests
-  [ scope "a" $ expect success
-  , scope "b.c" $ expect success
-  , scope "b" $ expect success
-  , scope "b" . scope "c" . scope "d" $ expect success
+  [ scope "a" $ unitTest success
+  , scope "b.c" $ unitTest success
+  , scope "b" $ unitTest success
+  , scope "b" . scope "c" . scope "d" $ unitTest success
   ]
 
 reverseTest :: Test
@@ -31,33 +31,33 @@ reverseTest = scope "list reversal" $ property $ do
 
 main :: IO ()
 main = do
-  _ <- run $ expect $ 1 === (1 :: Int)
+  _ <- run $ example $ 1 === (1 :: Int)
   _ <- run suite1
   _ <- runOnly "a" suite1
   _ <- runOnly "b" suite1
-  _ <- runOnly "b" $ tests [suite1, scope "xyz" (expect (crash "never run"))]
-  _ <- runOnly "b.c" $ tests [suite1, scope "b" (expect (crash "never run"))]
+  _ <- runOnly "b" $ tests [suite1, scope "xyz" (unitTest (crash "never run"))]
+  _ <- runOnly "b.c" $ tests [suite1, scope "b" (unitTest (crash "never run"))]
   _ <- runOnly "x.go" $ tests
-    [ scope "x.go to" $ expect $ crash "never run"
-    , scope "x.go" $ expect success
+    [ scope "x.go to" $ unitTest $ crash "never run"
+    , scope "x.go" $ unitTest success
     ]
   _ <- runOnly "x.go to" $ tests
-    [ scope "x.go to" $ expect success
-    , scope "x.go" $ expect $ crash "never run"
+    [ scope "x.go to" $ unitTest success
+    , scope "x.go" $ unitTest $ crash "never run"
     ]
   _ <- run reverseTest
 
   _ <- run $ tests
-    [ expect $ matching    _Left  (Left 1   :: Either Int ())
-    , expect $ notMatching _Right (Left 1   :: Either Int ())
-    , expect $ matching    _Right (Right () :: Either Int ())
-    , expect $ notMatching _Left  (Right () :: Either Int ())
+    [ example $ matches      _Left  (Left 1   :: Either Int ())
+    , example $ doesn'tMatch _Right (Left 1   :: Either Int ())
+    , example $ matches      _Right (Right () :: Either Int ())
+    , example $ doesn'tMatch _Left  (Right () :: Either Int ())
 
     -- Uncomment for an example diff:
     -- , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
     ]
 
-  _ <- run $ scope "bracket" $ expect $ bracket
+  _ <- run $ scope "bracket" $ example $ bracket
     (mkstemp "temp")
     (\(filepath, handle) -> hClose handle >> removeFile filepath)
     (\(_filepath, handle) -> do

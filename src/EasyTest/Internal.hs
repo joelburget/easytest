@@ -18,11 +18,12 @@ module EasyTest.Internal
   -- * Structuring tests
     tests
   , scope
-  , expect
+  , example
+  , unitTest
   , property
   -- * Assertions for unit tests
-  , matching
-  , notMatching
+  , matches
+  , doesn'tMatch
   , skip
   , pending
   , crash
@@ -108,16 +109,16 @@ scope msg tree =
   let newScopes = splitSpecifier msg
   in foldr (\scope' test -> NamedTests [(scope', test)]) tree newScopes
 
--- | Run a unit test. Example:
+-- | Run a unit test (same as 'unitTest'). Example:
 --
--- >>> run $ expect $ 1 === 2
+-- >>> run $ example $ 1 === 2
 -- > ━━━ run ━━━
 -- >   ✗ (unnamed) failed after 1 test.
 -- >
 -- >        ┏━━ tests/Suite.hs ━━━
 -- >     26 ┃ main :: IO ()
 -- >     27 ┃ main = do
--- >     28 ┃   run $ expect $ 1 === (2 :: Int)
+-- >     28 ┃   run $ example $ 1 === (2 :: Int)
 -- >        ┃   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 -- >        ┃   │ Failed (- lhs =/= + rhs)
 -- >        ┃   │ - 1
@@ -127,8 +128,30 @@ scope msg tree =
 -- >     > recheck (Size 0) (Seed 2914818620245020776 12314041441884757111) (unnamed)
 -- >
 -- >   ✗ 1 failed.
-expect :: HasCallStack => PropertyT IO () -> Test
-expect = Leaf Unit
+example :: HasCallStack => PropertyT IO () -> Test
+example = Leaf Unit
+
+-- | Run a unit test (same as 'example'). Example:
+--
+-- >>> run $ unitTest $ 1 === 2
+-- > ━━━ run ━━━
+-- >   ✗ (unnamed) failed after 1 test.
+-- >
+-- >        ┏━━ tests/Suite.hs ━━━
+-- >     26 ┃ main :: IO ()
+-- >     27 ┃ main = do
+-- >     28 ┃   run $ unitTest $ 1 === (2 :: Int)
+-- >        ┃   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-- >        ┃   │ Failed (- lhs =/= + rhs)
+-- >        ┃   │ - 1
+-- >        ┃   │ + 2
+-- >
+-- >     This failure can be reproduced by running:
+-- >     > recheck (Size 0) (Seed 2914818620245020776 12314041441884757111) (unnamed)
+-- >
+-- >   ✗ 1 failed.
+unitTest :: HasCallStack => PropertyT IO () -> Test
+unitTest = Leaf Unit
 
 -- | Run a property test. Example:
 --
@@ -188,8 +211,8 @@ preview l = getFirst #. foldMapOf l (First #. Just)
 -- >     48 ┃ main :: IO ()
 -- >     49 ┃ main = do
 -- >     50 ┃   _ <- run $ tests
--- >     51 ┃     [ expect $ matching _Left (Left 1   :: Either Int ())
--- >     52 ┃     , expect $ matching _Left (Right () :: Either Int ())
+-- >     51 ┃     [ expect $ matches _Left (Left 1   :: Either Int ())
+-- >     52 ┃     , expect $ matches _Left (Right () :: Either Int ())
 -- >        ┃     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 -- >     53 ┃     ]
 -- >     54 ┃   pure ()
@@ -200,13 +223,13 @@ preview l = getFirst #. foldMapOf l (First #. Just)
 -- >     > recheck (Size 0) (Seed 14003809197113786240 2614482618840800713) (unnamed)
 -- >
 -- >   ✗ 1 failed, 1 succeeded.
-matching :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
-matching p s = withFrozenCallStack $ case preview p s of
+matches :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
+matches p s = withFrozenCallStack $ case preview p s of
   Just _  -> success
   Nothing -> do { footnote "Prism failed to match"; failure }
 
-notMatching :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
-notMatching p s = withFrozenCallStack $ case preview p s of
+doesn'tMatch :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
+doesn'tMatch p s = withFrozenCallStack $ case preview p s of
   Nothing -> success
   Just _  -> do { footnote "Prism matched"; failure }
 
