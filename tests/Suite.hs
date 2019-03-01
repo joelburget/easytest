@@ -71,7 +71,7 @@ main = do
     -- , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
     ]
 
-  _ <- run $ scope "bracket" $ mkUnitTest $ bracket
+  _ <- run $ scope "bracket" $ expect $ bracket
     (mkstemp "temp")
     (\(filepath, handle) -> hClose handle >> removeFile filepath)
     (\(_filepath, handle) -> do

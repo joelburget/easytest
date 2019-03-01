@@ -199,7 +199,6 @@ module EasyTest (
   , scope
   , expect
   , property
-  , Testable(..)
   -- * Running tests
   , run
   , runOnly
