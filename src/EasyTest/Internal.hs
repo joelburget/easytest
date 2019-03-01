@@ -206,6 +206,29 @@ preview :: Getting (First a) s a -> s -> Maybe a
 preview l = getFirst #. foldMapOf l (First #. Just)
 {-# INLINE preview #-}
 
+-- | Test whether a prism matches. Example:
+--
+-- >>> main
+-- > ━━━ run ━━━
+-- >   ✓ (unnamed) passed 1 test.
+-- >   ✗ (unnamed) failed after 1 test.
+-- >
+-- >        ┏━━ tests/Suite.hs ━━━
+-- >     48 ┃ main :: IO ()
+-- >     49 ┃ main = do
+-- >     50 ┃   _ <- run $ tests
+-- >     51 ┃     [ expect $ match _Left (Left 1   :: Either Int ())
+-- >     52 ┃     , expect $ match _Left (Right () :: Either Int ())
+-- >        ┃     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-- >     53 ┃     ]
+-- >     54 ┃   pure ()
+-- >
+-- >     Prism failed to match
+-- >
+-- >     This failure can be reproduced by running:
+-- >     > recheck (Size 0) (Seed 14003809197113786240 2614482618840800713) (unnamed)
+-- >
+-- >   ✗ 1 failed, 1 succeeded.
 match :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
 match p s = withFrozenCallStack $ case preview p s of
   Just _  -> success
