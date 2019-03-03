@@ -18,13 +18,13 @@ module EasyTest.Internal
   -- * Structuring tests
     tests
   , scope
+  , skip
   , example
   , unitTest
   , property
   -- * Assertions for unit tests
   , matches
   , doesn'tMatch
-  , skip
   , pending
   , crash
   -- * Running tests
@@ -80,8 +80,13 @@ import qualified Hedgehog.Internal.Tree     as HT
 
 import           EasyTest.Hedgehog
 
+-- | A prism embodies one constructor of a sum type (as a lens embodies one
+-- part of a product type). See 'EasyTest.Prism._Just', 'EasyTest.Prism._Nothing', 'EasyTest.Prism._Left', and 'EasyTest.Prism._Right' for examples. See <http://hackage.haskell.org/package/lens-4.17/docs/Control-Lens-Prism.html Control.Lens.Prism> for more explanation.
 type Prism     s t a b = forall p f. (Choice p, Applicative f) => p a (f b) -> p s (f t)
+
+-- | A type-restricted prism. See <http://hackage.haskell.org/package/lens-4.17/docs/Control-Lens-Prism.html Control.Lens.Prism> for more explanation.
 type Prism'    s   a   = Prism s s a a
+
 type Getting r s   a   = (a -> Const r a) -> s -> Const r s
 
 -- | Unit- or property- test.
@@ -200,7 +205,7 @@ preview :: Getting (First a) s a -> s -> Maybe a
 preview l = getFirst #. foldMapOf l (First #. Just)
 {-# INLINE preview #-}
 
--- | Test whether a prism matches. Example:
+-- | Test whether a 'Prism' matches. Example:
 --
 -- >>> main
 -- > ━━━ run ━━━
@@ -228,6 +233,7 @@ matches p s = withFrozenCallStack $ case preview p s of
   Just _  -> success
   Nothing -> do { footnote "Prism failed to match"; failure }
 
+-- | Test whether a 'Prism' doesn't match. Compare with 'matches'.
 doesn'tMatch :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
 doesn'tMatch p s = withFrozenCallStack $ case preview p s of
   Nothing -> success
@@ -317,7 +323,7 @@ run t = do
 rerun :: Seed -> Test -> IO Summary
 rerun = rerunOnly ""
 
--- | Explicitly skip this test.
+-- | Explicitly skip this set of tests.
 skip :: Test -> Test
 skip = Skipped
 

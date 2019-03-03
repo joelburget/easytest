@@ -1,4 +1,14 @@
 {-# LANGUAGE Rank2Types        #-}
+-- |
+-- Module      : EasyTest.Prism
+-- Copyright   : (c) Joel Burget, 2018-2019
+-- License     : MIT
+-- Maintainer  : joelburget@gmail.com
+-- Stability   : experimental
+--
+-- This module defines lens-style prisms for use with 'EasyTest.matches' /
+-- 'EasyTest.doesn'tMatch'. These are equivalent and compatible with the
+-- definitions in <http://hackage.haskell.org/package/lens-4.17/docs/Control-Lens-Prism.html Control.Lens.Prism>.
 module EasyTest.Prism
   ( _Left
   , _Right

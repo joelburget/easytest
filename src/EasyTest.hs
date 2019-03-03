@@ -16,15 +16,15 @@ import qualified Hedgehog.Range as Range
 
 suite :: 'Test'
 suite = 'tests'
-  [ 'scope' "addition.ex" $ 'expect' $ 1 + 1 == 2
+  [ 'scope' "addition.ex" $ 'unitTest' $ 1 + 1 === 2
   , 'scope' "list.reversal" $ 'property' $ do
       ns @<-@ 'forAll' $
         Gen.list (Range.singleton 10) (Gen.int Range.constantBounded)
       reverse (reverse ns) '===' ns
   -- equivalent to `'scope' "addition.ex3"`
-  , 'scope' "addition" . 'scope' "ex3" $ 'expect' $ 3 + 3 === 6
-  , 'scope' "always passes" 'ok' -- record a success result
-  , 'scope' "failing test" $ 'crash' "oh noes!!"
+  , 'scope' "addition" . 'scope' "ex3" $ 'unitTest' $ 3 + 3 === 6
+  , 'scope' "always passes" $ 'unitTest' 'success' -- record a success result
+  , 'scope' "failing test" $ 'unitTest' $ 'crash' "oh noes!!"
   ]
 
 -- NB: `'run' suite` would run all tests, but we only run
@@ -44,26 +44,11 @@ This generates the output:
 >   ⚐ failing test gave up after 1 discard, passed 0 tests.
 >   ⚐ 3 gave up, 3 succeeded.
 
-The idea here is to write tests with ordinary Haskell code, with control flow explicit and under programmer control.
+We write tests with ordinary Haskell code, with control flow explicit and under programmer control.
 
 = User guide
 
-EasyTest supports two types of tests -- property tests and unit tests. Property tests are written as hedgehog properties. Unit tests are written via assertions (eg 'expect').
-
-== Unit tests
-
-The simplest unit tests are 'ok', 'crash', and 'expect':
-
-@
--- Record a success
-'ok' :: 'Test'
-
--- Record a failure
-'crash' :: String -> 'Test'
-
--- Record a success if True, otherwise record a failure
-'expect' :: PropertyT IO () -> 'Test'
-@
+EasyTest supports two types of tests -- property tests and unit tests. Both are expressed as hedgehog properties ('PropertyT' 'IO' @()@). Unit tests, built with 'unitTest' (or 'example') are run once. Property tests, built with 'property', are run with many random values.
 
 We often want to label tests so we can see when they succeed or fail. For that we use 'scope':
 
@@ -73,48 +58,49 @@ We often want to label tests so we can see when they succeed or fail. For that w
 'scope' :: String -> 'Test' -> 'Test'
 @
 
-Here's an example usage, putting all these primitives together:
+Here's an example usage:
 
 @
 module Main where
 
-import EasyTest (Test, scope, crash, expect, run, tests)
+import EasyTest
+  ('Test', 'scope', 'crash', 'run', 'tests', 'example', 'success', ('==='), 'Summary')
 
 suite :: 'Test'
 suite = 'tests'
-  [ 'ok'
-  , 'scope' "test-crash" $ 'crash' "oh noes!"
-  , 'expect' $ 1 + 1 == 2
+  [ 'example' 'success'
+  , 'scope' "test-crash" $ 'example' $ 'crash' "oh noes!"
+  , 'example' $ 1 + 1 === 2
   ]
 
-main :: Main
+main :: IO 'Summary'
 main = 'run' suite
 @
 
-This example is sequencing the 'ok', 'crash', and 'expect', so that they're all tested. The output is:
+This example runs the three examples in order so that they're all tested. The output is:
 
 > ━━━ run ━━━
 >   ✓ (unnamed) passed 1 test.
 >   ✗ test-crash failed after 1 test.
 >
 >        ┏━━ tests/Suite.hs ━━━
->      7 ┃ suite :: Test
->      8 ┃ suite = tests
->      9 ┃   [ expect success
->     10 ┃   , scope "test-crash" $ crash "oh noes!"
->        ┃   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
->     11 ┃   , expect $ 1 + 1 == 2
->     12 ┃   ]
+>      6 ┃ suite :: Test
+>      7 ┃ suite = tests
+>      8 ┃   [ example success
+>      9 ┃   , scope "test-crash" $ example $ crash "oh noes!"
+>        ┃   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>     10 ┃   , example $ 1 + 1 === 2
+>     11 ┃   ]
 >
 >     oh noes!
 >
 >     This failure can be reproduced by running:
->     > recheck (Size 0) (Seed 5260262085575879281 15584855976373220115) test-crash
+>     > recheck (Size 0) (Seed 12444749623322829837 10053881125821732685) test-crash
 >
 >   ✓ (unnamed) passed 1 test.
 >   ✗ 1 failed, 2 succeeded.
 
-In the output, we get a stack trace pointing to the line where crash was called (@..tests/Suite.hs:10@), information about failing tests, and instructions for rerunning the tests with an identical random seed (in this case, there's no randomness, so @rerun@ would work fine, but if our test generated random data, we might want to rerun with the exact same random numbers). Note that, somewhat embarrassingly, the error message currently gives bad instructions and the correct way to rerun the tests is with @'rerun' (Seed 9567438751443806220 10328000621946411483) suite@.
+In the output, we get a stack trace pointing to the line where crash was called (@..tests/Suite.hs:9@), information about failing tests, and instructions for rerunning the tests with an identical random seed (in this case, there's no randomness, so @rerun@ would work fine, but if our test generated random data, we might want to rerun with the exact same random numbers). Note that, somewhat embarrassingly, the error message currently gives bad instructions and the correct way to rerun the tests is with @'rerun' (Seed 12444749623322829837 10053881125821732685) suite@.
 
 The various run functions ('run', 'runOnly', 'rerun', and 'rerunOnly') all return a hedgehog 'Summary'. Use 'cabalTestSuite' to exit the process with a nonzero status in the event of a failure, for use with @exitcode-stdio-1.0@ cabal @test-suite@s. Here's an example cabal file:
 
@@ -133,8 +119,8 @@ For tests that are logically separate, we usually combine them into a suite usin
 
 @
 suite = 'tests'
-  [ 'scope' "ex1" $ 'expect' $ 1 + 1 == 2
-  , 'scope' "ex2" $ 'expect' $ 2 + 2 == 4
+  [ 'scope' "ex1" $ 'example' $ 1 + 1 === 2
+  , 'scope' "ex2" $ 'example' $ 2 + 2 === 4
   ]
 @
 
@@ -168,20 +154,20 @@ reverseTest = 'property' $ do
   r '===' nums
 @
 
-See the hedgehog docs for more on writing good property tests.
+See the <http://hackage.haskell.org/package/hedgehog hedgehog docs> for more on writing good property tests.
 
 == Bracketed tests
 
-EasyTest also supports ("bracketed") tests requiring setup and teardown.
+EasyTest also supports /bracketed/ tests requiring setup and teardown.
 
 For example, we could open a temporary file:
 
 @
-'scope' "bracket-example" $ 'expect' $ 'bracket'
+'scope' "bracket-example" $ 'example' $ 'bracket'
   (mkstemp "temp")
   (\(filepath, handle) -> hClose handle >> removeFile filepath)
   (\(_filepath, handle) -> do
-    liftIO $ hPutStrLn handle "we can do IO"
+    liftIO $ hPutStrLn handle "this temporary file will be cleaned up"
     'success')
 @
 
