@@ -228,6 +228,8 @@ preview l = getFirst #. foldMapOf l (First #. Just)
 -- >     > recheck (Size 0) (Seed 14003809197113786240 2614482618840800713) (unnamed)
 -- >
 -- >   ✗ 1 failed, 1 succeeded.
+--
+-- Use with 'EasyTest.Prism._Just', 'EasyTest.Prism._Nothing', 'EasyTest.Prism._Left', 'EasyTest.Prism._Right', or <http://hackage.haskell.org/package/lens-4.17/docs/Control-Lens-Prism.html Control.Lens.Prism>
 matches :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
 matches p s = withFrozenCallStack $ case preview p s of
   Just _  -> success
