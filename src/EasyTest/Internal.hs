@@ -283,7 +283,9 @@ runTreeOnly = runTreeOnly' [] where
 -- | Skip this test tree (mark all properties as skipped).
 skipTree' :: [String] -> Test -> [([String], TestType, PropertyT IO ())]
 skipTree' stack = \case
-  Leaf ty _test    -> [(reverse stack, ty, discard)]
+  -- As a minor hack, we set any skipped test to type 'Unit' so it'll only run
+  -- once.
+  Leaf _ty _test   -> [(reverse stack, Unit, discard)]
   Sequence trees   -> concatMap (skipTree' stack) trees
   NamedTests trees -> concatMap go trees
   Skipped test     -> skipTree' stack test
