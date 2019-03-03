@@ -90,7 +90,6 @@ library
 
   ghc-options: -Wall
 
--- I really have no idea why you'd ever use this, just use an executable as above
 test-suite tests
   type:           exitcode-stdio-1.0
   main-is:        Suite.hs
