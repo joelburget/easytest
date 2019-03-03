@@ -12,7 +12,7 @@ bug-reports:   https://github.com/joelburget/easytest/issues
 copyright:     Copyright (C) 2017-2019 Joel Burget, Copyright (C) 2016 Paul Chiusano and contributors
 synopsis:      Simple, expressive testing library
 description:
-  EasyTest is a simple testing toolkit, meant to replace most uses of QuickCheck, SmallCheck, HUnit, and frameworks like Tasty, etc. Here's an example usage:
+  EasyTest is a simple testing toolkit for unit- and property-testing. It's based on the hedgehog property-testing system. Here's an example usage:
   .
   > module Main where
   >
