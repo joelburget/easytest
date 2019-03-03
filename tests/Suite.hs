@@ -47,15 +47,28 @@ main = do
     ]
   _ <- run reverseTest
 
-  _ <- run $ tests
-    [ example $ matches      _Left  (Left 1   :: Either Int ())
-    , example $ doesn'tMatch _Right (Left 1   :: Either Int ())
-    , example $ matches      _Right (Right () :: Either Int ())
-    , example $ doesn'tMatch _Left  (Right () :: Either Int ())
+  _ <- run $
+    let l1, ru :: Either Int ()
+        l1 = Left 1
+        ru = Right ()
+        nullP, length2P :: Prism' [Int] ()
+        nullP    = nearly [] null
+        length2P = nearly [1, 2] $ \lst -> length lst == 2
+    in scope "prisms" $ tests
+         [ example $ matches      _Left             l1
+         , example $ doesn'tMatch _Right            l1
+         , example $ matches      (_Left . only 1)  l1
+         , example $ doesn'tMatch (_Left . only 2)  l1
+         , example $ matches      _Right            ru
+         , example $ doesn'tMatch _Left             ru
+         , example $ matches      nullP             []
+         , example $ matches      length2P          [1, 2]
+         , example $ matches      length2P          [2, 2]
+         , example $ doesn'tMatch length2P          []
 
-    -- Uncomment for an example diff:
-    -- , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
-    ]
+         -- Uncomment for an example diff:
+         -- , expectEq          "foo\nbar\nbaz" ("foo\nquux\nbaz" :: String)
+         ]
 
   _ <- run $ scope "bracket" $ example $ bracket
     (mkstemp "temp")
