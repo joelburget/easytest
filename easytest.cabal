@@ -22,15 +22,15 @@ description:
   >
   > suite :: Test
   > suite = tests
-  >   [ scope "addition.ex1" $ expect $ 1 + 1 == 2
-  >   , scope "addition.ex2" $ expect $ 2 + 3 == 5
-  >   , scope "list.reversal" $ propertyTest $ do
+  >   [ scope "addition.ex1" $ unitTest $ 1 + 1 === 2
+  >   , scope "addition.ex2" $ unitTest $ 2 + 3 === 5
+  >   , scope "list.reversal" $ property $ do
   >       ns <- forAll $
   >         Gen.list (Range.singleton 10) (Gen.int Range.constantBounded)
-  >       reverse (reverse ns) '===' ns
+  >       reverse (reverse ns) === ns
   >   -- equivalent to `scope "addition.ex3"`
-  >   , scope "addition" . scope "ex3" $ expect $ 3 + 3 == 6
-  >   , scope "always passes" $ ok -- record a success result
+  >   , scope "addition" . scope "ex3" $ unitTest $ 3 + 3 === 6
+  >   , scope "always passes" $ unitTest success -- record a success result
   >   , scope "failing test" $ crash "oh noes!!"
   >   ]
   >
@@ -49,7 +49,7 @@ description:
   >   ⚐ always passes gave up after 1 discard, passed 0 tests.
   >   ⚐ failing test gave up after 1 discard, passed 0 tests.
   >   ⚐ 3 gave up, 3 succeeded.
-  The idea here is to write tests with ordinary Haskell code, with control flow explicit and under programmer control.
+  We write tests with ordinary Haskell code, with control flow explicit and under programmer control.
 
 build-type:    Simple
 extra-source-files: CHANGES.md
