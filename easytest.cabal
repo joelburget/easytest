@@ -51,10 +51,9 @@ description:
   >   ⚐ 3 gave up, 3 succeeded.
   We write tests with ordinary Haskell code, with control flow explicit and under programmer control.
 
-build-type:    Simple
+build-type:         Simple
 extra-source-files: CHANGES.md
-data-files:
-tested-with: GHC == 8.0.2, GHC == 8.2.2, GHC == 8.4.3, GHC == 8.6.3
+tested-with:        GHC == 8.0.2, GHC == 8.2.2, GHC == 8.4.3, GHC == 8.6.3
 
 source-repository head
   type: git
