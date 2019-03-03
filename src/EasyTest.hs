@@ -16,13 +16,13 @@ import qualified Hedgehog.Range as Range
 
 suite :: 'Test'
 suite = 'tests'
-  [ 'scope' "addition.ex" $ 'unitTest' $ 1 + 1 === 2
+  [ 'scope' "addition.ex" $ 'unitTest' $ 1 + 1 '===' 2
   , 'scope' "list.reversal" $ 'property' $ do
       ns @<-@ 'forAll' $
         Gen.list (Range.singleton 10) (Gen.int Range.constantBounded)
       reverse (reverse ns) '===' ns
   -- equivalent to `'scope' "addition.ex3"`
-  , 'scope' "addition" . 'scope' "ex3" $ 'unitTest' $ 3 + 3 === 6
+  , 'scope' "addition" . 'scope' "ex3" $ 'unitTest' $ 3 + 3 '===' 6
   , 'scope' "always passes" $ 'unitTest' 'success' -- record a success result
   , 'scope' "failing test" $ 'unitTest' $ 'crash' "oh noes!!"
   ]
