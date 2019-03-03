@@ -78,7 +78,7 @@ import           Hedgehog.Internal.Report   (Summary (..))
 import           Hedgehog.Internal.Seed     (random)
 import qualified Hedgehog.Internal.Tree     as HT
 
-import           EasyTest.Hedgehog
+import           EasyTest.Internal.Hedgehog
 
 -- | A prism embodies one constructor of a sum type (as a lens embodies one
 -- part of a product type). See 'EasyTest.Prism._Just', 'EasyTest.Prism._Nothing', 'EasyTest.Prism._Left', and 'EasyTest.Prism._Right' for examples. See <http://hackage.haskell.org/package/lens-4.17/docs/Control-Lens-Prism.html Control.Lens.Prism> for more explanation.

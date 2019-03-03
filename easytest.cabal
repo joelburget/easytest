@@ -65,8 +65,8 @@ library
 
   exposed-modules:
     EasyTest
-    EasyTest.Hedgehog
     EasyTest.Internal
+    EasyTest.Internal.Hedgehog
     EasyTest.Prism
 
   build-depends:

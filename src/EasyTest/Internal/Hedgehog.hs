@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 -- |
--- Module      : EasyTest.Hedgehog
+-- Module      : EasyTest.Internal.Hedgehog
 -- Copyright   : (c) Joel Burget, 2018-2019
 -- License     : MIT
 -- Maintainer  : joelburget@gmail.com
@@ -8,7 +8,7 @@
 --
 -- This module defines 'recheckSeed', which just checks a 'Group' using a given
 -- seed.
-module EasyTest.Hedgehog (recheckSeed) where
+module EasyTest.Internal.Hedgehog (recheckSeed) where
 
 import           Control.Monad.IO.Class
 
