@@ -29,7 +29,7 @@ suite = 'tests'
 
 -- NB: `'run' suite` would run all tests, but we only run
 -- tests whose scopes are prefixed by "addition"
-main :: IO ()
+main :: IO 'Summary'
 main = 'runOnly' "addition" suite
 @
 
