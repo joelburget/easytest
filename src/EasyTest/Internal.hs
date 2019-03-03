@@ -22,6 +22,7 @@ module EasyTest.Internal
   , example
   , unitTest
   , property
+  , propertyWith
   -- * Assertions for unit tests
   , matches
   , doesn'tMatch
@@ -51,6 +52,8 @@ module EasyTest.Internal
   , (/==)
   , Seed
   , Summary(..)
+  , PropertyConfig(..)
+  , defaultConfig
   ) where
 
 import           Control.Applicative        (Const(..))
@@ -90,7 +93,7 @@ type Prism'    s   a   = Prism s s a a
 type Getting r s   a   = (a -> Const r a) -> s -> Const r s
 
 -- | Unit- or property- test.
-data TestType = Unit | Prop
+data TestType = Unit | Prop PropertyConfig
 
 -- | A set of unit- and property-tests
 data Test
@@ -160,15 +163,27 @@ unitTest = Leaf Unit
 
 -- | Run a property test. Example:
 --
--- >>> run $ property $ do
--- >>>   list <- forAll $ Gen.list @_ @Int (Range.linear 0 100)
--- >>>     (Gen.element [0..100])
--- >>>   reverse (reverse list) === list
+-- >>> run $ scope "list reversal" $ property $ do
+-- >..   list <- forAll $ Gen.list @_ @Int (Range.linear 0 100)
+-- >..     (Gen.element [0..100])
+-- >..   reverse (reverse list) === list
 -- > ━━━ run ━━━
--- >   ✓ (unnamed) passed 100 tests.
+-- >   ✓ list reversal passed 100 tests.
 -- >   ✓ 1 succeeded.
 property :: HasCallStack => PropertyT IO () -> Test
-property = Leaf Prop
+property = Leaf (Prop defaultConfig)
+
+-- | Run a property test with a custom configuration. This allows you to configure the 'propertyTestLimit', 'propertyDiscardLimit', 'propertyShrinkLimit', or 'propertyShrinkRetries'. Example:
+--
+-- >>> run $ scope "list reversal" $ propertyWith (defaultConfig { propertyTestLimit = 500 }) $ do
+-- >..   list <- forAll $ Gen.list @_ @Int (Range.linear 0 100)
+-- >..     (Gen.element [0..100])
+-- >..   reverse (reverse list) === list
+-- > ━━━ run ━━━
+-- >   ✓ list reversal passed 500 tests.
+-- >   ✓ 1 succeeded.
+propertyWith :: HasCallStack => PropertyConfig -> PropertyT IO () -> Test
+propertyWith = Leaf . Prop
 
 -- | Make a test with setup and teardown steps.
 bracket :: IO a -> (a -> IO ()) -> (a -> PropertyT IO ()) -> PropertyT IO ()
@@ -248,8 +263,8 @@ mkGroup name props = Group name $ props <&> \(path, ty, test) ->
         [] -> "(unnamed)"
         _  -> fromString (intercalate "." path)
       propConf = case ty of
-        Unit -> PropertyConfig 1 1 0 0
-        Prop -> defaultConfig
+        Unit      -> PropertyConfig 1 1 0 0
+        Prop conf -> conf
   in (name', Property propConf test)
 
 -- | Flatten a test tree. Use with 'mkGroup'

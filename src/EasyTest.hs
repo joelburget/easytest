@@ -184,6 +184,7 @@ module EasyTest (
   , example
   , unitTest
   , property
+  , propertyWith
   -- * Assertions for unit tests
   , matches
   , doesn'tMatch
@@ -215,6 +216,8 @@ module EasyTest (
   , annotate
   , forAll
   , PropertyT
+  , PropertyConfig(..)
+  , defaultConfig
   ) where
 
 import           EasyTest.Internal
