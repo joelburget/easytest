@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/joelburget/easytest.svg?branch=master)](https://travis-ci.org/joelburget/easytest)
+[![Hackage][hackage-shield]][hackage] [![Travis][travis-shield]][travis]
 
 EasyTest is a simple testing toolkit for unit- and property-testing. It's based on the [hedghog](http://hackage.haskell.org/package/hedgehog) property-testing system. Here's an example usage:
 
@@ -186,3 +186,9 @@ Here's some of my thinking in the design of this library:
 * Most of the functionality of QuickCheck is overkill anyway! There's no need for `Arbitrary` instances (explicit generation is totally fine, and even preferred in most cases), `Coarbitrary` (cute, but not useful when the HOF you are testing is parametric), or shrinking (just generate your test cases in increasing sizes, and your first failure will be the smallest!).
 
 I hope that you enjoy writing your tests with this library!
+
+[hackage]: https://hackage.haskell.org/package/easytest
+[hackage-shield]: https://img.shields.io/badge/hackage-v0.2.1.svg?style=flat
+
+[travis]: https://travis-ci.org/joelburget/easytest
+[travis-shield]: https://travis-ci.org/joelburget/easytest.svg?branch=master&style=flat
