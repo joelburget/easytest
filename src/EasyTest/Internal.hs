@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP               #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
@@ -67,11 +66,6 @@ import           Data.Monoid (First(..))
 import           Data.Profunctor.Choice
 import           Data.Profunctor.Unsafe
 import           Data.String                (fromString)
-#if MIN_VERSION_base(4,9,0)
-import           GHC.Stack
-#else
-import           Data.CallStack
-#endif
 import           System.Exit
 
 import           Hedgehog                   hiding (Test, test, property)
@@ -79,6 +73,7 @@ import           Hedgehog.Internal.Gen      hiding (discard)
 import           Hedgehog.Internal.Property hiding (Test, property, test)
 import           Hedgehog.Internal.Report   (Summary (..))
 import           Hedgehog.Internal.Seed     (random)
+import           Hedgehog.Internal.Source   (HasCallStack, withFrozenCallStack)
 import qualified Hedgehog.Internal.Tree     as HT
 
 import           EasyTest.Internal.Hedgehog
