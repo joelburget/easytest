@@ -94,4 +94,4 @@ test-suite tests
   type:           exitcode-stdio-1.0
   main-is:        Suite.hs
   hs-source-dirs: tests
-  build-depends:  base, easytest, hedgehog, unix, directory, profunctors
+  build-depends:  base, easytest, hedgehog, unix, directory, profunctors, transformers
