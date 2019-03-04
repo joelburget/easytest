@@ -1,7 +1,4 @@
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 module Main where
 
 import           Control.Monad.IO.Class (liftIO)
@@ -25,7 +22,7 @@ suite1 = tests
 
 reverseTest :: Test
 reverseTest = scope "list reversal" $ propertyWith (defaultConfig { propertyTestLimit = 500 }) $ do
-  list <- forAll $ Gen.list @_ @Int (Range.linear 0 100)
+  (list :: [Int]) <- forAll $ Gen.list (Range.linear 0 100)
     (Gen.element [0..100])
   reverse (reverse list) === list
 
