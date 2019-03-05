@@ -136,7 +136,7 @@ reverseTest = scope "list reversal" $ property $ do
 
 The above code generates lists of sizes between 0 and 100, consisting of `Int` values in the range 0 through 99.
 
-If our list reversal test failed, we might use `runOnly "list reversal"` or `rerunOnly "list reversal" \<randomseed\>` to rerun just that subtree of the test suite, and we might add some additional diagnostics to see what was going on:
+If our list reversal test failed, we might use `runOnly "list reversal"` or `rerunOnly "list reversal" <randomseed>` to rerun just that subtree of the test suite, and we might add some additional diagnostics to see what was going on:
 
 ```haskell
 import           EasyTest
@@ -153,11 +153,11 @@ reverseTest = property $ do
   r === nums
 ```
 
-See the <http://hackage.haskell.org/package/hedgehog hedgehog docs> for more on writing good property tests.
+See the [hedgehog docs](http://hackage.haskell.org/package/hedgehog) for more on writing good property tests.
 
 ### Bracketed tests
 
-EasyTest also supports /bracketed/ tests requiring setup and teardown.
+EasyTest also supports _bracketed_ tests requiring setup and teardown.
 
 For example, we could open a temporary file:
 
