@@ -43,7 +43,7 @@ This generates the output:
 
 We write tests with ordinary Haskell code, with control flow explicit and under programmer control.
 
-= User guide
+## User guide
 
 EasyTest supports two types of tests -- property tests and unit tests. Both are expressed as hedgehog properties (`PropertyT IO ()`). Unit tests, built with `unitTest` (or `example`) are run once. Property tests, built with `property`, are run with many random values.
 
@@ -123,7 +123,7 @@ suite = tests
   ]
 ```
 
-== Property tests
+### Property tests
 
 We can also create property tests (via hedgehog). As an example, we can express the property that reversing a list twice results in the original list:
 
@@ -155,7 +155,7 @@ reverseTest = property $ do
 
 See the <http://hackage.haskell.org/package/hedgehog hedgehog docs> for more on writing good property tests.
 
-== Bracketed tests
+### Bracketed tests
 
 EasyTest also supports /bracketed/ tests requiring setup and teardown.
 
