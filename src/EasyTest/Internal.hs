@@ -236,7 +236,7 @@ preview l = getFirst #. foldMapOf l (First #. Just)
 -- >
 -- >   ✗ 1 failed, 1 succeeded.
 --
--- Use with 'EasyTest.Prism._Just', 'EasyTest.Prism._Nothing', 'EasyTest.Prism._Left', 'EasyTest.Prism._Right', or <http://hackage.haskell.org/package/lens-4.17/docs/Control-Lens-Prism.html Control.Lens.Prism>
+-- Use with 'EasyTest.Prism._Just', 'EasyTest.Prism._Nothing', 'EasyTest.Prism._Left', 'EasyTest.Prism._Right', 'EasyTest.Prism.only', 'EasyTest.Prism.nearly', or <http://hackage.haskell.org/package/lens-4.17/docs/Control-Lens-Prism.html Control.Lens.Prism>
 matches :: HasCallStack => Prism' s a -> s -> PropertyT IO ()
 matches p s = withFrozenCallStack $ case preview p s of
   Just _  -> success
