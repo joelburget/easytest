@@ -223,8 +223,8 @@ preview l = getFirst #. foldMapOf l (First #. Just)
 -- >     48 ┃ main :: IO ()
 -- >     49 ┃ main = do
 -- >     50 ┃   _ <- run $ tests
--- >     51 ┃     [ expect $ matches _Left (Left 1   :: Either Int ())
--- >     52 ┃     , expect $ matches _Left (Right () :: Either Int ())
+-- >     51 ┃     [ example $ matches _Left (Left 1   :: Either Int ())
+-- >     52 ┃     , example $ matches _Left (Right () :: Either Int ())
 -- >        ┃     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 -- >     53 ┃     ]
 -- >     54 ┃   pure ()

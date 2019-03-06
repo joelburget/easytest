@@ -1,7 +1,24 @@
-## 0.3.0 (02/??/2019)
+## 0.3.0 (3/6/2019)
 
-* [Drop support for ghc 7.10]
 * Switch backend of the library to build on the hedgehog library
+* Change `Test` from kind `* -> *` to kind `*`. See [my note](https://github.com/joelburget/easytest/issues/22#issuecomment-469039853) for motivation. In short, this fixes a lot of bugs and we now support property testing.
+
+Upgrading:
+
+`Test` now has kind `*`. It's no longer a functor, applicative, monad, etc.
+- You can build an atomic test with `unitTest` (/ `example`) or `propertyTest`.
+- Also see `bracket`, `bracket_`, and `finally` for tests with setup / teardown.
+- `tests` and `scope` work as before. I mention them here because they're the
+  other way to build tests.
+
+Removed:
+- `expect b`          -> `assert b`
+- `expectEq a b`      -> `a === b`
+- `expectJust`        -> `matches _Just`
+- `expectRight`       -> `matches _Right`
+- `expectRightNoShow` -> `matches _Right`
+- `expectLeft`        -> `matches _Left`
+- `expectLeftNoShow`  -> `matches _Left`
 
 ## 0.2.1 (10/24/2018)
 
