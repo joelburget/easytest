@@ -1,3 +1,5 @@
 resolver: nightly-2019-03-04
 packages:
 - .
+nix:
+  shell-file: nix_stack.nix
