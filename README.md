@@ -1,3 +1,5 @@
+**Note: this library is no longer maintained**
+
 [![Hackage][hackage-shield]][hackage] [![Travis][travis-shield]][travis]
 
 EasyTest is a simple testing toolkit for unit- and property-testing. It's based on the [hedghog](http://hackage.haskell.org/package/hedgehog) property-testing system. Here's an example usage:
